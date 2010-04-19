@@ -117,7 +117,7 @@ meta::define_form 'note', sub {
 };
 __TGOjJwmj+QJp1giUQqg2bEaQe8RvqnrFEqyZhIpSC34
 
-meta::meta('datatypes::sh', <<'__5cST7E0Z7BY2WLU3462a5xZ5Ox9RbnmNHEa7NyS72os');
+meta::meta('datatypes::sh', <<'__+0AR2hHnh+UldymM4MpYnXCE52tHTO+7Lp7HXSsKyTM');
 meta::define_form 'sh', sub {
   my ($name, $value) = @_;
   $externalized_functions{$name} = "sh::$name";
@@ -130,12 +130,12 @@ meta::define_form 'sh', sub {
 
     file::write($filename, &$name(@args));
     $new_value =~ s/__code__/$filename/go;
-    my $output = qx|$new_value|;
+    my $output = system($new_value);
     unlink $filename;
     $output;
   };
 };
-__5cST7E0Z7BY2WLU3462a5xZ5Ox9RbnmNHEa7NyS72os
+__+0AR2hHnh+UldymM4MpYnXCE52tHTO+7Lp7HXSsKyTM
 
 meta::meta('datatypes::vim-highlighter', <<'__vsGBLVDC3S+pX/k/zl5CgXeAQz2QjpBkLgx0CJ4vcn0');
 meta::define_form 'vim_highlighter', \&meta::bootstrap::implementation;
@@ -228,76 +228,85 @@ JSON encoding and decoding.
                     'undefined': k ('null')});
 __gyBFhEfbP7alsYGb131DnVDnIdT6XSViKCLOpJ9988E
 
-meta::code('main', <<'__Sf5ava2bj733VdOdLzPF32n0pQGCi1/mJAmQPrKjNe8');
+meta::code('main', <<'__t3MszJ9gSRt6kTmhRvSMpV5k18MC9cLihuylNFsP60g');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 var d = (function () {
-  var    a = function  (x) {return x},
-       arr = function (xs) {return Array.prototype.slice.call (xs)},
-         k = function  (x) {return function  () {return x}},
-        k$ = k (a),
-         c = function  (f) {return function (x) {return f (x.fn())}},
+  var   tr = [],                                                       ps = [Function, String, Number, Boolean, RegExp, Array],
+         a = function  (x) {return x},                                  k = function (x) {return function  () {return x}},
+       arr = function (xs) {return Array.prototype.slice.call (xs)},   k$ = k (a),
+         d = function   () {return d.create (d, arguments)},          fns = {'()': '@0(@1)', '[]': '@0[@1]', '!': '!@0', '!!': '!!@0', '~': '~@0'},
+
       keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
                                                                               else                                       for (var k in arguments[i]) o[k] = arguments[i][k];
                             return o},
        ops = {plus: '+', minus: '-', times: '*', over: '/', modulo: '%', lt: '<', gt: '>', le: '<=', ge: '>=', eq: '==', ne: '!=', req: '===', rne: '!==', and: '&&', or: '||',
-              xor: '^', bitand: '&', bitor: '|'},
-       fns = {'()': '@0(@1)', '[]': '@0[@1]', '!': '!@0', '!!': '!!@0', '~': '~@0'},
-        tr = [],
-        ps = [Function, String, Number, Boolean, RegExp, Array],
-         d = function () {return d.create (d, arguments)};
+              xor: '^', bitand: '&', bitor: '|', then: ','};
 
   init (String.prototype, (function (c) {return {
-    invoke: function  () {return '@2[@0].bind(@2).fn.apply(@2[@0], @1)'.fn (this, arguments)},
-      pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('@0 && @0[@1]')}},
-      hash: function (v) {var result = {}; result[this] = v; return result},
-     alias: function (v) {return c[this] = v.fn()},
-    expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
-        fn: function  () {var f = c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
+     invoke: function  () {return '@2[@0].bind(@2).fn.apply(@2[@0], @1)'.fn (this, arguments)},
+     expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
+      alias: function (v) {return c[this] = v.fn()},
+       hash: function (v) {var result = {}; result[this] = v; return result},
+       pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('@0 && @0[@1]')}},
+         fn: function  () {var f = c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
 
   init (RegExp.prototype, {
-    macro: function (f) {var s = this; return tr.push (function (x) {return x.replace (s, f)}), this},
-       fn: function  () {return this.exec.bind (this)}});
+      macro: function (f) {var s = this; return tr.push (function (x) {return x.replace (s, f)}), this},
+         fn: function  () {return this.exec.bind (this)}});
 
   init (Function.prototype, {
-    bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
-      fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
+       bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
+         fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
 
   init (Array.prototype, {
-    sort_by: c(function (f) {return this.sort ('@0(@1) < @0(@2)'.fn (f))}),
-       each: c(function (f) {for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this}),
-        map: c(function (f) {var xs = []; for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs}),
-       grep: c(function (f) {var xs = []; for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs}),
-       fold: c(function (f) {var x = this[0]; for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x}),
-         fn:   function  () {var xs = this, result = xs.length && typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
-                                                                  typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold ('init(@0,@1)')))} :
-                                                                                               function () {return xs.map ('@1.fn().apply (this, @0)'.fn (arguments))};
-                             return result.fn.apply (result, arguments)}});
+    sort_by: function (f) {return this.sort ('@0(@1) < @0(@2)'.fn (f.fn()))},
+       each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
+       grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
+       fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
+        map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
+         fn: function  () {var xs = this, result = xs.length && typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
+                                                                typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold ('init(@0,@1)')))} :
+                                                                                             function () {return xs.map ('@1.fn().apply (this, @0)'.fn (arguments))};
+                           return result.fn.apply (result, arguments)}});
 
-  init (Boolean.prototype, {fn: function () {return this ? a : (1).fn ()}});
+  init (Boolean.prototype, {fn: function () {return this.valueOf () ? a : (1).fn ()}});
   init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
 
   /@(\d+)/g.macro (function (_, x) {return 'arguments[' + x + ']'});
-      /@_/g.macro ('arr(arguments)');
-      /$_/g.macro ('this');
+      /@_/g.macro ('Array.prototype.slice.call(arguments)');
+     /\$_/g.macro ('this');
 
   keys (fns).each ('@1.alias(@0[@1])'.fn (fns));
-  keys (ops).each (function (k) {ops[k]      .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
-                                 ops[k + '$'].alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
+  keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
+                                 (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
 
   init (d, {a: a, k: k, k$: k$, keys: keys, init: init, tr: tr});
-  (d.extend = ps.map.bind (ps).fn ('init(@0, @1)')) ({compose:  c(function (g) {var f = this.fn(); return function () {return f.call (this, g.apply (this, arguments))}}),
-                                                      variadic: '@_.map($_.fn())'.fn()});
+  (d.extend = ps.map.bind (ps).fn ('init.apply($_,@_)')) ({compose:  function (g) {var f = this.fn(), g = g.fn(); return function () {return f.call (this, g.apply (this, arguments))}},
+                                                           variadic: '@_.map($_.fn())'.fn()});
 
   return d}) ();
-__Sf5ava2bj733VdOdLzPF32n0pQGCi1/mJAmQPrKjNe8
+__t3MszJ9gSRt6kTmhRvSMpV5k18MC9cLihuylNFsP60g
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
+
+meta::code('test', <<'__dgRDLO1ORoLHBE/zNjKLIURZBLAuUgRf1zUaeaWQRlQ');
+Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
+Licensed under the terms of the MIT source code license
+
+These unit tests are intended to be run in a command-line JavaScript interpreter such as Mozilla's SpiderMonkey, though they will probably work in a browser as well.
+
+:: get main
+
+  var assert = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
+
+  assert ([1, 2, 3].grep (/2/).length === 1, "Grep returns the wrong number of arguments");
+__dgRDLO1ORoLHBE/zNjKLIURZBLAuUgRf1zUaeaWQRlQ
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
@@ -868,6 +877,10 @@ __SSgRGyOQPbEleu+2TMjU4OCmMnjOWFSaJj0iwGkBsug
 meta::sh('node-repl', <<'__q9vTbSQ20/rHKteKvyoqfWOUHbXPrRXR8WvCi2vaMDY');
 node-repl __code__
 __q9vTbSQ20/rHKteKvyoqfWOUHbXPrRXR8WvCi2vaMDY
+
+meta::sh('repl', <<'__hpfIOvOFVwSLotcBcirerUZLwIeNISkgfqy8K01Nbk8');
+js -f __code__ -f -
+__hpfIOvOFVwSLotcBcirerUZLwIeNISkgfqy8K01Nbk8
 
 meta::sh('stats', <<'__e/Rj98I2/T+yRRdecrhlw5H3dWmBW2Vup15b2cbzKLg');
 echo $(cat __code__ | grep -v '//' | grep -v '^\s*$' | wc -l) LOC, \
