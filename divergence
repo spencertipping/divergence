@@ -211,7 +211,7 @@ something most people will normally do. In the future there may be a locking mec
 =cut
 __0h2CBA2cqa4qd6nox9dul6Jn9hcJFHw3uPdC89Xim7o
 
-meta::code('main', <<'__ItmnJmgg65MevqLFbNwlV3yRZxnnkgdWDI4ZpXQ8uRs');
+meta::code('main', <<'__ww+UU1h5RWM17yfbpWNcqRSEGvrlUWQNClMk/rcQFf4');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -222,27 +222,34 @@ var d = function (d) {
         k$ = d.k$   = k (a),
          c = d.c    = function  (f) {return function (x) {return f (x.fn())}},
       keys = d.keys = function  (o) {var xs = []; for (var k in o) if (o.hasOwnProperty (k)) xs.push (k); return xs},
-      init = d.init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].fn) arguments[i].fn().call (o);
-                                                                                       else                 keys (k).each (function (k) {o[k] = arguments[i][k]};
+      init = d.init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
+                                                                                       else                                       for (var k in arguments[i]) o[k] = arguments[i][k];
                                      return o},
       ops  = d.ops  = {plus: '+', minus: '-', times: '*', over: '/', modulo: '%', lt: '<', gt: '>', le: '<=', ge: '>=', eq: '==', ne: '!=', req: '===', rne: '!==', and: '&&', or: '||',
                        xor: '^', bitand: '&', bitor: '|'},
+      fns  = d.fns  = {'()': '@0(@1)', '[]': '@0[@1]', '!': '!@0', '!!': '!!@0', '~': '~@0'},
+       tr  = d.tr   = [],
       prototypes    = [Function, String, Number, Boolean, RegExp, Array];
 
-  init (String.prototype, {
-    invoke:  function  () {return '@2[@0].bind(@2).fn.apply(@2[@0], @1)'.fn (this, arguments)},
-      pick:  function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('@0 && @0[@1]')}},
-      hash:  function (v) {var result = {}; result[this] = v; return result},
-        fn: (function (c) {return function () {var f = c[this] || (c[this] = eval ('(function($_){return ' + this.replace (/@(\d+)/g, function (_, x) {return 'arguments[' + x + ']'}) + '})'));
-                                               return f.fn.apply (f, arguments)}})
-            (init ({'[]': function (x, y) {return x[y]}, '()': function (x, y) {return x(y)}},
-                   function () {var t = this; keys (ops).each (
-                     function (k) {t[k]       = t[ops[k]]       = eval ('(function(x,y){return x'                       + ops[k] + 'y})');
-                                   t[k + '$'] = t[ops[k] + '$'] = eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')})}))});
+  init (String.prototype, (function (c) {return {
+    invoke: function  () {return '@2[@0].bind(@2).fn.apply(@2[@0], @1)'.fn (this, arguments)},
+      pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('@0 && @0[@1]')}},
+      hash: function (v) {var result = {}; result[this] = v; return result},
+     alias: function (v) {return c[this] = v.fn()},
+    expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
+        fn: function  () {var f = c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
+
+  init (RegExp.prototype, {
+    macro: function (f) {var s = this; return tr.push (function (x) {return x.replace (s, f)}), this},
+       fn: function  () {return this.exec.bind (this)}});
+
+  /[@$](\d+)/g.macro (function (_, x) {return 'arguments[' + x + ']'});
+         /@_/g.macro ('arr(arguments)');
+         /$_/g.macro ('this');
 
   init (Function.prototype, {
-    bind: function (x) {var f = this; return function () {return f.apply (x, arguments)},
-      fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}}});
+    bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
+      fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
 
   init (Array.prototype, {
     sort_by: c(function (f) {return this.sort ('@0(@1) < @0(@2)'.fn (f))}),
@@ -250,36 +257,38 @@ var d = function (d) {
         map: c(function (f) {var xs = []; for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs}),
        grep: c(function (f) {var xs = []; for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs}),
        fold: c(function (f) {var x = this[0]; for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x}),
-         fn:   function  () {var xs = this, result = xs.length && typeof xs[0] === typeof 0  ? function () {return xs.map ('[]'.fn (arguments))} :
+         fn:   function  () {var xs = this, result = xs.length && typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
                                                                   typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold ('init(@0,@1)')))} :
                                                                                                function () {return xs.map ('@1.fn().apply (this, @0)'.fn (arguments))};
                              return result.fn.apply (result, arguments)}});
 
   init (Boolean.prototype, {fn: function () {return this ? a : (1).fn ()}});
-  init  (RegExp.prototype, {fn: function () {return this.exec.bind (this)}});
   init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
 
-  (d.extend = prototypes.map.bind (prototypes).fn ('init($_, @1)')) (
+  keys (fns).each ('@1.alias(@0[@1])'.fn (fns));
+  keys (ops).each (function (k) {ops[k]      .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
+                                 ops[k + '$'].alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
+
+  (d.extend = prototypes.map.bind (prototypes).fn ('init(@0, @1)')) (
     {compose: c(function (g) {var f = this.fn(); return function () {return f.call (this, g.apply (this, arguments))}}),
         comp: c(function  () {var f = this.fn(); return function () {return ! f.apply (this, arguments)}}),
     variadic: function () {return arr (arguments).map (this.fn())}});
 
-
-  var  parse_json = 'eval("(" + @0 + ")")'.fn ();       // FIXME
-  var encode_json = (function (types) {return function (x) {return types[typeof x] (x)}}) ({
-                      'number':    function (x) {return x.toString ()},
-                      'string':    function (x) {return '"' + x.replace (/"/g, '\\"') + '"'},
-                      'object':    function (x) {if (x === null) return 'null';
-                                                 var xs = [];
-                                                 if (x.constructor === Array) {for (var i = 0, l = x.length; i < l; ++i) xs.push (encode_json (x[i])); return '[' + xs.join (',') + ']'}
-                                                 else                         {for (var k in x) xs.push (encode_json (k) + ': ' + encode_json (x[k])); return '{' + xs.join (',') + '}'}},
-                      'boolean':   function (x) {return x ? 'true' : 'false'},
-                      'function':  k ('<function>'),
-                      'undefined': k ('null')});
+  d.parse_json = 'eval("(" + @0 + ")")'.fn ();       // FIXME
+  d.encode_json = (function (types) {return function (x) {return types[typeof x] (x)}}) ({
+                    'number':    function (x) {return x.toString ()},
+                    'string':    function (x) {return '"' + x.replace (/"/g, '\\"') + '"'},
+                    'object':    function (x) {if (x === null) return 'null';
+                                               var xs = [];
+                                               if (x.constructor === Array) {for (var i = 0, l = x.length; i < l; ++i) xs.push (encode_json (x[i])); return '[' + xs.join (',') + ']'}
+                                               else                         {for (var k in x) xs.push (encode_json (k) + ': ' + encode_json (x[k])); return '{' + xs.join (',') + '}'}},
+                    'boolean':   function (x) {return x ? 'true' : 'false'},
+                    'function':  k ('<function>'),
+                    'undefined': k ('null')});
 };
 
 d (d);
-__ItmnJmgg65MevqLFbNwlV3yRZxnnkgdWDI4ZpXQ8uRs
+__ww+UU1h5RWM17yfbpWNcqRSEGvrlUWQNClMk/rcQFf4
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
