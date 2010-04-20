@@ -228,15 +228,15 @@ JSON encoding and decoding.
                     'undefined': k ('null')});
 __gyBFhEfbP7alsYGb131DnVDnIdT6XSViKCLOpJ9988E
 
-meta::code('main', <<'__t3MszJ9gSRt6kTmhRvSMpV5k18MC9cLihuylNFsP60g');
+meta::code('main', <<'__ePLwiUck64Pqmq3UjB9sKSzRvxhg1AmkVOzMW5LcK/8');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 var d = (function () {
   var   tr = [],                                                       ps = [Function, String, Number, Boolean, RegExp, Array],
-         a = function  (x) {return x},                                  k = function (x) {return function  () {return x}},
+         a = function  (x) {return x},                                  k = function (x) {return function () {return x}},
        arr = function (xs) {return Array.prototype.slice.call (xs)},   k$ = k (a),
-         d = function   () {return d.create (d, arguments)},          fns = {'()': '@0(@1)', '[]': '@0[@1]', '!': '!@0', '!!': '!!@0', '~': '~@0'},
+         d = function   () {return d.define.apply (d, arguments)},    fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
 
       keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
@@ -246,67 +246,67 @@ var d = (function () {
               xor: '^', bitand: '&', bitor: '|', then: ','};
 
   init (String.prototype, (function (c) {return {
-     invoke: function  () {return '@2[@0].bind(@2).fn.apply(@2[@0], @1)'.fn (this, arguments)},
+    maps_to: function (v) {var result = {}; result[this] = v; return result},
+     invoke: function  () {return '$2[$0].bind($2).fn.apply($2[$0], $1)'.fn (this.toString (), arguments)},
      expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
-      alias: function (v) {return c[this] = v.fn()},
-       hash: function (v) {var result = {}; result[this] = v; return result},
-       pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('@0 && @0[@1]')}},
-         fn: function  () {var f = c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
+      alias: function (v) {return d[this] = v.fn()},
+       pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('$0 && $0[$1]')}},
+         fn: function  () {var f = d[this] || c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
 
   init (RegExp.prototype, {
-      macro: function (f) {var s = this; return tr.push (function (x) {return x.replace (s, f)}), this},
+    maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
          fn: function  () {return this.exec.bind (this)}});
 
   init (Function.prototype, {
+       type: function  () {var f = function () {}, c = this; init.apply (this, [f.prototype].concat (arr (arguments))); return function () {var x = new f (); return c.apply (x, arguments)}},
        bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
          fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
 
   init (Array.prototype, {
-    sort_by: function (f) {return this.sort ('@0(@1) < @0(@2)'.fn (f.fn()))},
+    sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
        each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
        grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
        fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
         map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
-         fn: function  () {var xs = this, result = xs.length && typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
-                                                                typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold ('init(@0,@1)')))} :
-                                                                                             function () {return xs.map ('@1.fn().apply (this, @0)'.fn (arguments))};
+         fn: function  () {var xs = this, result = xs.length && (typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
+                                                                 typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold (d.init)))} :
+                                                                                              function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))});
                            return result.fn.apply (result, arguments)}});
 
   init (Boolean.prototype, {fn: function () {return this.valueOf () ? a : (1).fn ()}});
   init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
 
-  /@(\d+)/g.macro (function (_, x) {return 'arguments[' + x + ']'});
-      /@_/g.macro ('Array.prototype.slice.call(arguments)');
-     /\$_/g.macro ('this');
+  (d.macro  = tr.push.bind (tr)) (/\$(\d+)/g.maps_to ('"arguments[" + arguments[1] + "]"'.fn()),
+                                       /@_/g.maps_to ('Array.prototype.slice.call(arguments)'),
+                                      /\$_/g.maps_to ('this'));
 
-  keys (fns).each ('@1.alias(@0[@1])'.fn (fns));
+  keys (fns).each ('$1.alias($0[$1])'.fn (fns));
   keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
                                  (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
 
-  init (d, {a: a, k: k, k$: k$, keys: keys, init: init, tr: tr});
-  (d.extend = ps.map.bind (ps).fn ('init.apply($_,@_)')) ({compose:  function (g) {var f = this.fn(), g = g.fn(); return function () {return f.call (this, g.apply (this, arguments))}},
-                                                           variadic: '@_.map($_.fn())'.fn()});
-
   return d}) ();
-__t3MszJ9gSRt6kTmhRvSMpV5k18MC9cLihuylNFsP60g
+__ePLwiUck64Pqmq3UjB9sKSzRvxhg1AmkVOzMW5LcK/8
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__dgRDLO1ORoLHBE/zNjKLIURZBLAuUgRf1zUaeaWQRlQ');
+meta::code('test', <<'__cwEFSA9FawV9sJSe9ud/kpxy1wjiEAI/7rmzWRnPAJY');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
-These unit tests are intended to be run in a command-line JavaScript interpreter such as Mozilla's SpiderMonkey, though they will probably work in a browser as well.
-
 :: get main
 
-  var assert = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
+  var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
+  var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
 
-  assert ([1, 2, 3].grep (/2/).length === 1, "Grep returns the wrong number of arguments");
-__dgRDLO1ORoLHBE/zNjKLIURZBLAuUgRf1zUaeaWQRlQ
+String tests.
+
+  assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
+  assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}), 5, 'String.invoke');
+  assert_equal ('$_'.expand (), 'this', 'String.expand');
+__cwEFSA9FawV9sJSe9ud/kpxy1wjiEAI/7rmzWRnPAJY
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
