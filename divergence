@@ -212,16 +212,52 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__8MQlOqlHKN6koX3vp8Ujam83R/QxqFSXNoJD5uPeI2Q');
+meta::code('main', <<'__JILRVSdapiGG7XqHpiiLUAqEGjulI94HUhp7WwmwOIU');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 Language.
-  Divergence is a subset of procedural JavaScript and a superset of functional JavaScript. It removes access to imperative features of the language, replacing them with functional and
-  orthogonal macro definitions that promote a more stateless coding model. It adds some new datatypes to the language as well, including symbol literals and expressions. These are all unfolded
-  at 'compile-time', though you can use d.eval to produce runtime code.
+  Divergence parses (almost) all valid JavaScript code and translates operators into method calls. At some later date, it will probably allow you to do CPS-conversion on your code as well.
+  There are a couple of things to be aware of:
 
-  The /if/ construct is no longer available in Divergence. To perform conditional execution, the ||, &&, and ?: operators should be used with the comma operator. Alternatively, you can use the
+    | 1. Operator translation makes things slow! If you're doing number crunching, you should not do it in an overloaded context unless you're confident that your JS interpreter inlines
+         functions. Numbers, booleans, and strings have their operators routed through prototype methods, so writing a normal array iterator:
+
+         | for (var i = 0, l = xs.length; i < l; ++i)
+
+       | will in fact generate this code:
+
+         | for (var i = 0, l = xs.length; i["<"](l); ++i)
+
+         What was a comparison will now have the overhead of a method call.
+
+    | 2. Divergence supports macro operators. USE THESE SPARINGLY! The >$> operator is a built-in macro that builds a function. This has the result that no object can overload >$>, since it
+         will never be present in generated code (unless a macro puts it there, which would be confusing). Much more readable in the general case is the prefix macro form:
+
+         | some_macro(foo, bar, bif)
+
+         This gives your code the ability to see the parse trees for foo, bar, and bif and transform them arbitrarily. There are two advantages to prefix macros. One is that there are many
+         more identifier names than operator names, so there's less likely to be a conflict. The other is that the precedence is unambiguous.
+
+  Things Divergence doesn't support:
+
+    | 1. Switch/case. This is because I'm too lazy to implement parsing for it.
+    | 2. 'Standard form' function definitions. Functions need to be declared as vars rather than as 'function foo () {...}'.
+    | 3. Labels and named break/continue.
+    | 4. Prefix - and + operators inside expressions. These are interpreted as belonging to the preceding operator.
+
+  It will probably support these at some point in the future.
+
+Divergence standard library.
+  When you're constructing anonymous functions with the >$> infix operator, you'll run into some limitations of the JavaScript parse tree. One is that code blocks don't fit into an expression
+  context, so you're limited to using only valid expressions and operators. This creates a number of limitations:
+
+    | 1. No if, for, while, do, throw, try/catch, switch, return, break, continue, etc. statements
+    | 2. No variable definitions with /var/ (though see the <- operator)
+
+  This section describes ways of working around these limitations.
+
+  The /if/ statement is unavailable in expression context. To perform conditional execution, the ||, &&, and ?: operators should be used with the comma operator. Alternatively, you can use the
   Boolean monad to bind against an anonymous function:
 
     | condition >>- (x >$> 'foo')         // equivalent to condition && 'foo'
@@ -237,8 +273,8 @@ Language.
     | [1, 2, 3] * ($_ + 1)
     | [1, 2, 3] >>- [$_, $_ + 1]
 
-  $_ is the identity function, and functions overload operators to compose. Values that aren't functions, such as 1, are callable and return themselves. Arrays call each of their parameters as
-  a function when called, so this distributive law holds:
+  $_ is the identity function (available outside of divergent functions as d.$_), and functions overload operators to compose. Values that aren't functions, such as 1, are callable and return
+  themselves. Arrays call each of their parameters as a function when called, so this distributive law holds:
 
     | [f, g] (5)                    // [f(5), g(5)]
     | [f, g] >>- ($_ (5))
@@ -258,6 +294,8 @@ Semigroup properties.
     | (f1 + f2) (x) = f1(x) + f2(x)
     | b1 + b2 = b1 ^ b2
     | n1 + n2 = n1 + n2
+
+  All pure functions are homomorphic under most operations. The only notable exception is the invocation operator, which clearly behaves differently -- e.g. f1(f2)(x) != f1(x)(f2(x)).
 
 Operators.
   Because functions in JavaScript must compile into a valid JavaScript parse tree, there are some limitations placed on the operators that can be overloaded. In particular, one cannot create
@@ -288,7 +326,7 @@ Macros.
   Sometimes you want to write an operator or function that has the ability to rewrite code. Fortunately, this is quite a straightforward process. The >$> macro is one such construct, and it is
   defined like this:
 
-    | d.infix ('>$>', function (x, y) {return '(function(' + x.macroexpand() + '){return ' + y.macroexpand() + '})'});
+    | d.infix ('>$>', function (x, y) {return '(function(' + x + '){return ' + y + '})'});
 
   Prefix macros can also be defined. They resemble normal function calls and look like this:
 
@@ -307,16 +345,20 @@ var d = (function (cache) {
            init = function  (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.constructor === Function) $_.call (o);
                                                                                                           else                             for (var k in $_) o[k] = $_[k]; return o},
       prototype = function (f, p) {return init (f, function () {init (this.prototype, p)})},
-           last = function (xs) {return xs[xs.length - 1]},
+           last = function   (xs) {return xs[xs.length - 1]},
 
-     precedence = {'<i>': 1, '[]': 1, '.': 1, '()': 1, 'new': 2, 'typeof': 3, '~': 3, '!': 3, '*': 4, '/': 4, '%': 4, '+': 5, '-': 5, '<<': 6, '>>': 6, '>>>': 6, '<': 7, '>': 7, '<=': 7,
-                   '>=': 7, 'instanceof': 7, 'in': 7, '==': 8, '!=': 8, '===': 8, '!==': 8, '&': 9, '^': 10, '|': 11, '&&': 12, '||': 13, '?': 14, ':': 14, '=': 15, '+=': 15, '-=': 15,
-                   '*=': 15, '/=': 15, '%=': 15, '&=': 15, '|=': 15, '^=': 15, '<<=': 15, '>>=': 15, '>>>=': 15, ',': 16, '{}': 17, ';': 18},
-          right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof')),
-        unaries = set(qw('! ~ new typeof <array> <object> <i>')),
-       literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== ! new [] instanceof in typeof :')),
+     precedence = {'[]': 1, '.': 1, '()': 1, 'unew': 2, 'u++': 3, 'u--': 3, 'utypeof': 3, 'u~': 3, 'u!': 3, 'u+': 3, 'u-': 3, '*': 4, '/': 4, '%': 4, '+': 5, '-': 5, '<<': 6, '>>': 6,
+                   '>>>': 6, '<': 7, '>': 7, '<=': 7, '>=': 7, 'instanceof': 7, 'in': 7, '==': 8, '!=': 8, '===': 8, '!==': 8, '&': 9, '^': 10, '|': 11, '&&': 12, '||': 13, '?': 14, ':': 14,
+                   '=': 15, '+=': 15, '-=': 15, '*=': 15, '/=': 15, '%=': 15, '&=': 15, '|=': 15, '^=': 15, '<<=': 15, '>>=': 15, '>>>=': 15, ',': 16, '{}': 17, ';': 18, 'if': 19, 'for': 19,
+                   'while': 19, 'do': 19, 'try': 19, 'catch': 19, 'finally': 19, 'function': 19, 'var': 19, 'else': 19},
+     predicated = set(qw('if while catch')),
+ non_predicated = set(qw('do try finally var const else')),
+    expressions = set(qw('throw return break continue')),
+          right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! unew utypeof u+ u- u++ u--')),
+        unaries = set(qw('++ -- u++ u-- u+ u- u! u~ new typeof <array> <object>')),
+       literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
       ternaries = {'?': ':'},
-         macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}, '<i>': function (x) {return s(x)}},
+         macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}},
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
            pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'},
 
@@ -325,36 +367,70 @@ var d = (function (cache) {
              op =  function (o) {return '+-*/%&|^!~=<>?:;.,'.indexOf (o) > -1},
            prec = (function (c) {return function (o) {
                     if (c[o]) return c[o];
-                    var p = 18, os = o.split ('$'); for (var i = 0, l = os.length, $_; i < l; ++i) ($_ = precedence[os[i]]) && $_ < p && (p = $_); return c[o] = p}}) ({}),
+                    var p = 20, os = o.split ('$'); for (var i = 0, l = os.length, $_; i < l; ++i) ($_ = precedence[os[i]]) && $_ < p && (p = $_); return c[o] = p}}) ({}),
 
         literal = function (x) {return x},
           unary = prototype (function (op, rhs) {this.op = op, this.rhs = rhs}, {toString: function () {return macros[this.op] ? macros[this.op] (this.rhs) : (this.op + ' ' + s(this.rhs))}}),
          binary = prototype (function (op, rhs, lhs) {this.op = op, this.lhs = lhs, this.rhs = rhs}, {
-                             toString: function () {return this.op === ',' || this.op ===  '.' ? s(this.lhs) + (this.lhs ? this.op : '') + s(this.rhs) :
-                                                                              this.op === '[]' ? s(this.lhs) + '[' + s(this.rhs) + ']' :
-                                                                              this.op ===  ':' ? s(this.lhs) + ':' + s(this.rhs) :
-                                                                               macros[this.op] ? macros[this.op] (this.lhs, this.rhs) :
-                                                                             literals[this.op] ? '((' + s(this.lhs) + ')'        + this.op +   '(' + s(this.rhs) + '))' :
-                                                                                                  '(' + s(this.lhs) + ')' + '["' + this.op + '"](' + s(this.rhs) + ')'}}),
+                             toString: function () {return ',.:'.indexOf (this.op) > -1 ? s(this.lhs) + (this.lhs ? this.op : '') + s(this.rhs) :
+                                                                       this.op === '[]' ? s(this.lhs) + '[' + s(this.rhs) + ']' :
+                                                                        macros[this.op] ? macros[this.op] (this.lhs, this.rhs) :
+                                                                      literals[this.op] ? '((' + s(this.lhs) + ')'        + this.op +   '(' + s(this.rhs) + '))' :
+                                                                                           '(' + s(this.lhs) + ')' + '["' + this.op + '"](' + s(this.rhs) + ')'}}),
 
         ternary = prototype (function (op, _3, _2, _1) {this.op = op, this._1 = _1, this._2 = _2, this._3 = _3}, {
                              toString: function () {return '((' + s(this._1) + ')' + this.op + '(' + s(this._2) + ')' + ternaries[this.op] + '(' + s(this._3) + '))'}}),
 
-          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [], pending = [], c = function (i) {return s.substr (i, 1)},
+          block = prototype (function (stuff) {this.stuff = stuff}, {toString: function () {return stuff.join (';\n')}}),
+
+JavaScript parsing.
+I'm using an inlined recursive-descent parser with flattened states and a streaming lexer to parse the source code. This is basically the same thing as a regular recursive-descent parser that
+delegates to a shunting yard algorithm for arithmetic parsing, except that it takes a bunch of shortcuts derived from the knowledge that the input is already well-formed. Well-formed input
+means that we can actually parse a much more general language than JavaScript, and this results in a more compact parser.
+
+Here is the optimized grammar:
+
+  |      statement ::= <predicated> (<expression>) <statement>
+                       for (<statements>) <statement>
+                       <non_predicated> <statement>
+                       <block>
+                       <expression>
+
+  |     statements ::= <statement>
+                       <statement> ; <statements>
+
+  |     expression ::= ( <expression> )
+                       [ <expression> ]
+                       function (<expression>) <statement>
+                       <expression> <binary_op> <expression>
+                       <unary_op> <expression>
+                       <expression> <unary_op>
+                       <literal>
+                       <ident>
+
+  |     predicated ::= if | while | catch
+  | non_predicated ::= do | try | finally | var | const | else
+
+  |             op ::= ...
+
+There are a few deviations that I'm making for the purposes of simplicity. I'm storing the derivation path, since that impacts how certain operators are interpreted. In particular, consider
+the expression {foo: 'bar'}. Interpreted in statement context it is a block with a labeled expression, and interpreted in expression context it's an object literal.
+
+          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [], pending = [], path = [], c = function (i) {return s.substr (i, 1)},
                                     a = function (t) {output.push (unaries[t] ? new unary (t, output.pop ()) : t === '?' ? new ternary (t, ($_ = output.pop ()).rhs, $_.lhs, output.pop ()) :
                                                                                                                            new  binary (norm(t), output.pop (), output.pop ()))};
-                                while (i < l) {
-                       if                                  (/\s/.test (c(i)))                                                       ++i;
-                  else if       (! last_was_op && '?:(['.indexOf (c(i)) > -1)                                                       last_was_op = !! (token = norm(c(i++)));
-                  else if         (last_was_op &&  '([{'.indexOf (c(i)) > -1)                                                       last_was_op =  ! (token = c(i++));
-                  else if                         ('}])'.indexOf (c(i)) > -1)                                                       last_was_op =  ! (token = c(i++));
-                  else if                  (c(i) === '/' && c(i + 1) === '*') while  (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
-                  else if                  (c(i) === '/' && c(i + 1) === '/') while             (c(++i) !== '\n' && c(i) !== '\r');
-                  else if                         (op(c(i)) && ! last_was_op) while (op(c(i)) || c(i) === '$' || /\s/.test (c(i)))  last_was_op = !! (token += ($_ = c(i++)) === ' ' ? '' : $_);
-                  else if (c(i) === '/' &&    last_was_op &&  (token = '/'))  while (c(++i) !== '/' || c(i - 1) === '\\' || ! ++i)  last_was_op =  ! (token += c(i));
-                  else if (c(i) === '"' && ! (last_was_op = ! (token = '"'))) while (c(++i) !== '"' || c(i - 1) === '\\' || ! ++i)  token += c(i);
-                  else if (c(i) === "'" && ! (last_was_op = ! (token = "'"))) while (c(++i) !== "'" || c(i - 1) === '\\' || ! ++i)  token += c(i);
-                  else                                                        while                                 (idents[c(i)])  last_was_op = !! precedence[token += c(i++)];
+                                while (i < l && ($_ = c(i))) {
+                       if                                  (/\s/.test ($_))                                                       ++i;
+                  else if       (! last_was_op && '?:(['.indexOf ($_) > -1)                                                       last_was_op = !! (token = norm($_)), ++i;
+                  else if                      ('([{}])'.indexOf ($_) > -1)                                                       last_was_op =  ! (token = $_), ++i;
+                  else if                  ($_ === '/' && c(i + 1) === '*') while  (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
+                  else if                  ($_ === '/' && c(i + 1) === '/') while             (c(++i) !== '\n' && c(i) !== '\r');
+                  else if ($_ === '/' &&    last_was_op &&  (token = '/'))  while (c(++i) !== '/' || c(i - 1) === '\\' || ! ++i)  last_was_op =  ! (token += c(i));
+                  else if ($_ === '"' && ! (last_was_op = ! (token = '"'))) while (c(++i) !== '"' || c(i - 1) === '\\' || ! ++i)  token += c(i);
+                  else if ($_ === "'" && ! (last_was_op = ! (token = "'"))) while (c(++i) !== "'" || c(i - 1) === '\\' || ! ++i)  token += c(i);
+                  else if          (last_was_op && op($_) && (token = 'u')) while      (op($_ = c(i)) && precedence[token + $_])  last_was_op = !! (token += $_), ++i;
+                  else if                                          (op($_)) while      (op($_ = c(i)) && precedence[token + $_])  last_was_op = !! (token += $_), ++i;
+                  else                                                      while                            (idents[$_ = c(i)])  last_was_op = !! precedence[token += $_], ++i;
 
                        if     (! token) continue;
                        if (last_was_op) while (($_ = last(pending)) && (right[$_] ? prec($_) < prec(token) : prec($_) <= prec(token))) a(pending.pop ());
@@ -370,12 +446,11 @@ var d = (function (cache) {
 
                        token = '';
                                 }
-                                while (pending.length) a(pending.pop());
                                 return output.pop ()};
 
   return parse;
 }) ({});
-__8MQlOqlHKN6koX3vp8Ujam83R/QxqFSXNoJD5uPeI2Q
+__JILRVSdapiGG7XqHpiiLUAqEGjulI94HUhp7WwmwOIU
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
