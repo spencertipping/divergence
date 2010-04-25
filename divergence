@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__k6hvn+ycX1yqfCb6hTicvk7AFYwbPv14O1tWpjkJHoU');
+meta::code('main', <<'__N3OlexKwmzV7lb58FNc+ILYODP8qrX8WScQ1r3f6R90');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -301,37 +301,60 @@ Macros.
 
   Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds, but operators don't.
 
-var d = (function () {
+var d = (function (cache) {
   var        qw = function  (s) {return s.split (' ')},
             set = function (xs) {return init ({}, function () {for (var i = 0, l = xs.length; i < l; ++i) this[xs[i]] = true})},
            init = function  (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.constructor === Function) $_.call (o);
                                                                                                           else                             for (var k in $_) o[k] = $_[k]; return o},
       prototype = function (f, p) {return init (f, function () {init (this.prototype, p)})},
+           last = function (xs) {return xs[xs.length - 1]},
 
      precedence = {'[]': 1, '.': 1, 'new': 1, '()': 2, 'typeof': 3, '~': 3, '!': 3, '*': 4, '/': 4, '%': 4, '+': 5, '-': 5, '<<': 6, '>>': 6, '>>>': 6, '<': 7, '>': 7, '<=': 7, '>=': 7,
                    'instanceof': 7, 'in': 7, '==': 8, '!=': 8, '===': 8, '!==': 8, '&': 9, '^': 10, '|': 11, '&&': 12, '||': 13, '?': 14, '=': 15, '+=': 15, '-=': 15, '*=': 15, '/=': 15,
                    '%=': 15, '&=': 15, '|=': 15, '^=': 15, '<<=': 15, '>>=': 15, '>>>=': 15, ',': 16},
-          right = set(qw('? = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new')),
+          right = set(qw('? = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof')),
+        unaries = set(qw('! ~ new typeof')),
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== ! new')),
       ternaries = {'?': ':'},
          macros = {},
+         idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
 
         literal = function (x) {return x},
           unary = prototype (function (op, rhs) {this.op = op, this.rhs = rhs}, {toString: function () {return macros[this.op] ? macros[this.op] (this.rhs) : (this.op + this.rhs)}}),
          binary = prototype (function (op, lhs, rhs) {this.op = op, this.lhs = lhs, this.rhs = rhs}, {
-                             toString: function () {return this.op === ',' ? this.lhs + ',' + this.rhs :                // Special case because of argument list non-orthogonality
-                                                           macros[this.op] ? macros[this.op] (this.lhs, this.rhs) :
-                                                         literals[this.op] ? '((' + this.lhs + ')' + this.op + '(' + this.rhs + '))' :
-                                                                             '(' + this.lhs + ')' + '["' + this.op + '"](' + this.rhs + ')'}}),
+                             toString: function () {return this.op === ',' || this.op === '.' ? this.lhs + this.op + this.rhs :
+                                                                              macros[this.op] ? macros[this.op] (this.lhs, this.rhs) :
+                                                                            literals[this.op] ? '((' + this.lhs + ')' + this.op + '(' + this.rhs + '))' :
+                                                                                                '(' + this.lhs + ')' + '["' + this.op + '"](' + this.rhs + ')'}}),
 
         ternary = prototype (function (op, _1, _2, _3) {this.op = op, this._1 = _1, this._2 = _2, this._3 = _3}, {
-                             toString: function () {return '((' + this._1 + ')' + this.op + '(' + this._2 + ')' + ternaries[this.op] + '(' + this._3 + '))'}});
+                             toString: function () {return '((' + this._1 + ')' + this.op + '(' + this._2 + ')' + ternaries[this.op] + '(' + this._3 + '))'}}),
 
-  var d    = init (function (f) {return d.eval (f.toString ())}, {
-    eval: 
-  return d;
-}) ();
-__k6hvn+ycX1yqfCb6hTicvk7AFYwbPv14O1tWpjkJHoU
+          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = false, output = [], pending = [], op = function (c) {return '+-*/%&|^!~=<>?:.,'.indexOf (c) > -1},
+                                    c = function (i) {return s.substr (i, 1)}, pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}','{'},
+                                 norm = function (o) {return ({'(': '()', '[': '[]', '{': '{}', ')': '()', ']': '[]', '}': '{}'})[o] || o},
+                                    a = function (t) {return unaries[t] ? unary (norm(t), output.pop ()) : t === '?' ? ternary (t,       output.pop (), output.pop (), output.pop ()) :
+                                                                                                                       binary  (norm(t), output.pop (), output.pop ())};
+                                while (i < l) {
+                                  if                             (/\s/.test (c(i))) ++i;
+                             else if     (last_was_op && '([{'.indexOf (c(i)) > -1) last_was_op = !  pending.push (pair[c(i++)]);
+                             else if   (! last_was_op && '(['. indexOf (c(i)) > -1) pending.push (c(i++));
+                             else if                    ('}])'.indexOf (c(i)) > -1) while                   (last(pending) !== c(i)) a(pending.pop ());
+                             else if (op(c(i)) && ! last_was_op && ! (token =  '')) while (op(c(i)) || c(i) === '$' || c(i) === ' ') last_was_op = !! (token += ($_ = c(i++)) === ' ' ? '' : $_);
+                             else if (op(c(i)) &&   last_was_op &&   (token = '/')) while      (c(++i) !== '/' || c(i - 1) === '\\') token += c(i);
+                             else if                (c(i) === '"' && (token = '"')) while      (c(++i) !== '"' || c(i - 1) === '\\') token += c(i);
+                             else if                (c(i) === "'" && (token = "'")) while      (c(++i) !== "'" || c(i - 1) === '\\') token += c(i);
+                             else if             (c(i) === '/' && c(i + 1) === '*') while       (c(++i) !== '*' && c(i + 1) !== '/') ;
+                             else if             (c(i) === '/' && c(i + 1) === '/') while         (c(++i) !== '\n' && c(i) !== '\r') ;
+                             else                                                   while                             (idents[c(i)]) token += c(i++);
+                                  token && output.push (literal (token));
+                                }
+                                while (pending.length) a(pending.pop ());
+                                return output.pop ()};
+
+  return parse;
+}) ({});
+__N3OlexKwmzV7lb58FNc+ILYODP8qrX8WScQ1r3f6R90
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
