@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__gllP35fjRVH+P1uV0GEDQIFPM0smXbVQN7Wg9wE++qw');
+meta::code('main', <<'__Zm4jcHbgSb+PV67UmaB6IiC7Xd61Qa5+LFRtG+/TP7Q');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -356,12 +356,13 @@ var d = (function (cache) {
  non_predicated = set(qw('do try finally var const else')),
     expressions = set(qw('throw return break continue')),
           right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! unew utypeof u+ u- u++ u--')),
-        unaries = set(qw('++ -- u++ u-- u+ u- u! u~ new typeof <array> <object>')),
+        unaries = set(qw('++ -- u++ u-- u+ u- u! u~ new typeof <array> <object> var')),
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
-      ternaries = {'?': ':'},
-         macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}},
+        openers = set(qw('if while catch do try finally var const else for ? ( [ { function')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
         closers = {'e':';}])', '?':':', '{':',', 's':')]};', 'S':')]}'},
+      ternaries = {'?': ':'},
+         macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}},
            pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'},
 
               s =  function (s) {return s === undefined || s === null ? '' : s.toString ()},
@@ -443,19 +444,20 @@ Parsing.
 
   The parser starts off in statement mode.
 
-          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [[]], pending = [[]], path = ['s'], c = function (i) {return s.charAt (i)},
-                                    a = function (t) {output.push (unaries[t] ? new unary (t, output.pop ()) : t === '?' ? new ternary (t, ($_ = output.pop ()).rhs, $_.lhs, output.pop ()) :
-                                                                                                                           new  binary (norm(t), output.pop (), output.pop ()))},
+          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [[]], pending = [[]], path = ['S'], c = function (i) {return s.charAt (i)},
+                                    a = function (t) {last(output).push (unaries[t] ? new unary (t, last(output).pop ()) :
+                                                                          t === '?' ? new ternary (t, ($_ = last(output).pop ()).rhs, $_.lhs, last(output).pop ()) :
+                                                                                      new  binary (norm(t), last(output).pop (), last(output).pop ()))},
                         do_precedence = function (t) {while (($_ = ll(pending)) && (right[$_] ? prec($_) < prec(t) : prec($_) <= prec(t))) a(last(pending).pop ())},
                            do_pending = function  () {while (last(pending).length) a(last(pending).pop ())},
-                           push_state = function (s) {output.push ([]), pending.push ([]), s ? path.push (token, s) : path.push ('e')},
+                           push_state = function (s) {output.push ([]), pending.push ([]), s ? (path.push (s)) : path.push ('e')},
                             pop_state = function  () {do_pending (); var p = path.pop (); (delegates[p] || delegates.path (p)) (output.pop ()); pending.pop ()},
-                push_expression_token = function (t) {t === 'function' ? push_state ('e') : last_was_op ? (do_precedence (t), last(pending).push (t)) : last(output).push (t)},
-                            delegates = {'s': function (xs) {output[output.length - 1] = last(output).concat (xs); path.pop ()},
-                                         'S': function (xs) {output[output.length - 1] = last(output).concat (xs); path.pop ()},
-                                         'e': function (xs) {output[output.length - 1] = last(output).concat (xs); path.pop ()},
-                                         '?': function (xs) {output[output.length - 1] = last(output).concat (xs); path.pop ()},
-                                        path: function  (p) {return function (xs) {output.push (new unary (p, xs))}},
+                push_expression_token = function (t) {t === 'function' ? push_state ('e') : last_was_op || t === '(' ? (do_precedence (t), last(pending).push (t)) : last(output).push (t)},
+                            delegates = {'s': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                                         'S': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                                         'e': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                                         '?': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                                        path: function  (p) {return function (xs) {last(output).push (new unary (p, xs))}},
                                          '{': function (xs) {last(output).push (new block (xs))}};
 
                 while (i < l && ($_ = c(i))) {
@@ -472,25 +474,27 @@ Parsing.
                   else                                                      while                            (idents[$_ = c(i)])  last_was_op = !! precedence[token += $_], ++i;
 
                   if (token) if ('sS'.indexOf ($_ = last(path)) > -1 && ';}])'.indexOf (token) > -1) token === ';' && $_ === 'S' ? do_pending () : pop_state (); 
-                             else                                                                    push_state (predicated[token] ? 'e' : non_predicated[token] ? 's' : token === 'for' ? 'S' :
-                                                                                                                 token === '{' ? 'S' : token === '?' ? '?' : ''),
-                                                                                                     closers[$_].indexOf (token) > -1 ? token === ',' ? do_pending () : pop_state () :
+                             else if (openers[$_])                                                   push_state (predicated[token] ? 'e' : non_predicated[token] ? 's' : token === 'for' ? 'S' :
+                                                                                                                 token === '{' ? 'S' : token === '?' ? '?' : '');
+                             else                                                                    closers[$_].indexOf (token) > -1 ? token === ',' ? do_pending () : pop_state () :
                                                                                                                                         push_expression_token (token);
+
                   token = '';
                                 }
                                 while (path.length > 1) pop_state ();
-                                return output.pop ()};
+                                do_pending ();
+                                return output.pop ().toSource ()};
 
   return parse;
 }) ({});
-__gllP35fjRVH+P1uV0GEDQIFPM0smXbVQN7Wg9wE++qw
+__Zm4jcHbgSb+PV67UmaB6IiC7Xd61Qa5+LFRtG+/TP7Q
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__S1HP/FVH7ezBq6wrMKrzFhbj6gdcl4++OANB8+e5cU8');
+meta::code('test', <<'__yK9sz+sFpr0753t7RtCLhU3XJanRJfcnqGp/H+DUiOo');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -509,6 +513,7 @@ Licensed under the terms of the MIT source code license
   test ('foo * bar + bif');
 
   test ('var x = 5');
+  test ('{foo; bar; bif; baz}');
   test ('if (foo) {bar; bif}');
 
   test ('foo + (bar == bif) * (baz === bok)');
@@ -541,7 +546,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__S1HP/FVH7ezBq6wrMKrzFhbj6gdcl4++OANB8+e5cU8
+__yK9sz+sFpr0753t7RtCLhU3XJanRJfcnqGp/H+DUiOo
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
