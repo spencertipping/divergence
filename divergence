@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__dsIu6T+jpCJNeb34uElWNmMt7Q0Q/l/TTmZdXwofVfQ');
+meta::code('main', <<'__wc0Cg+U9yHpLqvWxvRlLHBP5m0e86ENF/tbr2Ms+70o');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -244,7 +244,7 @@ Language.
     | 1. Switch/case. This is because I'm too lazy to implement parsing for it.
     | 2. 'Standard form' function definitions. Functions need to be declared as vars rather than as 'function foo () {...}'.
     | 3. Labels and named break/continue.
-    | 4. Prefix - and + operators inside expressions. These are interpreted as belonging to the preceding operator.
+    | 4. Prefix - and + operators inside expressions, including negative number literals. These are interpreted as belonging to the preceding operator.
 
   It will probably support these at some point in the future.
 
@@ -348,10 +348,10 @@ var d = (function (cache) {
            last = function   (xs) {return xs[xs.length - 1]},
              ll = function   (xs) {return last(last(xs))},
 
-     precedence = {'[]': 1, '.': 1, '()': 1, 'unew': 2, 'u++': 3, 'u--': 3, 'utypeof': 3, 'u~': 3, 'u!': 3, 'u+': 3, 'u-': 3, '*': 4, '/': 4, '%': 4, '+': 5, '-': 5, '<<': 6, '>>': 6,
-                   '>>>': 6, '<': 7, '>': 7, '<=': 7, '>=': 7, 'instanceof': 7, 'in': 7, '==': 8, '!=': 8, '===': 8, '!==': 8, '&': 9, '^': 10, '|': 11, '&&': 12, '||': 13, '?': 14, ':': 14,
-                   '=': 15, '+=': 15, '-=': 15, '*=': 15, '/=': 15, '%=': 15, '&=': 15, '|=': 15, '^=': 15, '<<=': 15, '>>=': 15, '>>>=': 15, ',': 16, '{}': 17, ';': 18, 'if': 19, 'for': 19,
-                   'while': 19, 'do': 19, 'try': 19, 'catch': 19, 'finally': 19, 'function': 19, 'var': 19, 'else': 19},
+     precedence = {'function':0, '[]':1, '.':1, '()':1, 'unew':2, 'u++':3, 'u--':3, 'utypeof':3, 'u~':3, 'u!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6,
+                   '<':7, '>':7, '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, ':':14, '=':15, '+=':15, '-=':15,
+                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ',':16, '{}':17, ';':18, 'if':19, 'for':19, 'while':19, 'do':19, 'try':19, 'catch':19,
+                   'finally':19, 'function':19, 'var':19, 'else':19},
      predicated = set(qw('if while catch')),
  non_predicated = set(qw('do try finally var const else')),
     expressions = set(qw('throw return break continue')),
@@ -360,7 +360,7 @@ var d = (function (cache) {
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
         openers = set(qw('if while catch do try finally var const else for ? ( [ { function')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
-        closers = {'e':';}])', '?':':', '{':',}', 's':')]};', 'S':')]}'},
+        closers = {'e':';}])', '?':':', '{':',}', 's':'};', 'S':'}'},
       ternaries = {'?': ':'},
          macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}},
            pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'},
@@ -442,21 +442,48 @@ Parsing.
   The third mode is 'waiting for the : to a ?' mode, which munches everything until the next ':'. Technically this isn't quite correct, but the incorrect cases will be filtered out by the
   initial JavaScript parse. It ends up treating the ? as a type of opening paren, and thus expects a : to close it.
 
-  The parser starts off in statement mode.
+  Here are some cases.
 
-          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [[]], pending = [[]], path = ['S'], c = function (i) {return s.charAt (i)},
-                                    a = function (t) {last(output).push (unaries[t] ? new unary (t, last(output).pop ()) :
+    Case 1. We're in statement mode and encounter the word 'var'. Then we push our state, put 'var' onto the pending stack (as a prefix unary operator), put 'e' on the path, and continue. Once
+            we hit the closer ';', we reduce all pending operations, apply 'var' to the remaining output, and push that single output element onto the list of outputs from the previous run.
+            Then we pop the 'e' off of the path and pop the empty output and pending arrays.
+
+    Case 2. We're in statement mode and encounter the word 'if'. We'll need to parse two different things, first an expression and then a single statement. This isn't too difficult; we just
+            need to push both states in the right order. We push the current state, put the 'if' onto the pending queue, put an 's' on the path, push the state again, and put an 'e' on the
+            path. We also absorb the next token, an open-paren, and go to parse the expression. It will exit on the close-paren and pop its state onto the end of the parent state's output
+            queue, then will parse a single statement. When that statement finishes parsing the pending queue will be run, and this will finish with the 'if' that was pushed in the beginning.
+            The state is popped and the single statement on the output queue is pushed onto the parent state's output.
+
+    Case 3. We're in statement mode and encouter the word 'function'. Since we don't parse the statement-form of 'function', we know this should be interpreted as an expression. We push our
+            state, push an 'e' onto the path, push the word 'function' onto the pending queue, push our state again, push an 's' onto the path, push our state once more, push an 'e' onto the
+            path, and absorb an open paren. (The logic is similar to 'if', except with the extra transition into expression-mode.) The word 'function' has top precedence, so the next operator
+            will cause it to bind to the two topmost output items, the argument list and the body.
+
+    Case 4. We're in expression mode and encounter the symbol ';'. This is in the closers for the path 'e', so we process all operations on the pending queue and pop our state, pushing the
+            output element onto the parent's output queue.
+
+    Case 5. We're in single-statement mode and encounter the symbol '{'. We push our state and push 'S' onto the path (indicating that we don't quit when we hit a ';'). Then we parse until we
+            hit the closer '}'. This isn't the end, unfortunately. When we pop and push onto the parent's output, we wrap the separate statements in a block constructor and check the parent
+            state. If the state is 's', then we pop out of that one too; otherwise we just leave it. This handles the single-statement case present on if-blocks (they aren't terminated by a
+            semicolon, but the 'if' just takes one block).
+
+    Case 6. We're in expression mode and encounter the symbol '{'. We push our state and push '{' onto the path. This is a special form of expression mode where ':' and ',' act as
+            left-associative infix binary operators whose precedences are the two lowest. When the '}' is encountered, we process all pending operations, wrap the result in an object
+            constructor, and pop the state, pushing the single constructed object onto the parent output queue.
+
+  The parser starts off in multi-statement mode (S).
+
+          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [[]], pending = [[]], path = ['S'], absorb = 0, c = function (i) {return s.charAt (i)},
+                                    a = function (t) {last(output).push (unaries[t] ? new   unary (t, last(output).pop ()) :
                                                                           t === '?' ? new ternary (t, ($_ = last(output).pop ()).rhs, $_.lhs, last(output).pop ()) :
                                                                                       new  binary (norm(t), last(output).pop (), last(output).pop ()))},
                         do_precedence = function (t) {while (($_ = ll(pending)) && (right[$_] ? prec($_) < prec(t) : prec($_) <= prec(t))) a(last(pending).pop ())},
                            do_pending = function  () {while (last(pending).length) a(last(pending).pop ())},
-                           push_state = function (s) {output.push ([]), pending.push ([]), s ? (path.push (s)) : path.push ('e')},
+                           push_state = function (s) {output.push ([]), pending.push ([token]), s ? (path.push (s)) : path.push ('e')},
                             pop_state = function  () {do_pending (); var p = path.pop (); (delegates[p] || delegates.path (p)) (output.pop ()); pending.pop ()},
                 push_expression_token = function (t) {t === 'function' ? push_state ('e') : last_was_op || t === '(' ? (do_precedence (t), last(pending).push (t)) : last(output).push (t)},
-                            delegates = {'s': function (xs) {output[output.length - 1] = last(output).concat (xs)},
-                                         'S': function (xs) {output[output.length - 1] = last(output).concat (xs)},
-                                         'e': function (xs) {output[output.length - 1] = last(output).concat (xs)},
-                                         '?': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                            delegates = {'s': function (xs) {output[output.length - 1] = last(output).concat (xs)}, 'S': function (xs) {output[output.length - 1] = last(output).concat (xs)},
+                                         'e': function (xs) {output[output.length - 1] = last(output).concat (xs)}, '?': function (xs) {output[output.length - 1] = last(output).concat (xs)},
                                         path: function  (p) {return function (xs) {last(output).push (new unary (p, xs))}},
                                          '{': function (xs) {last(output).push (new block (xs))}};
 
@@ -473,12 +500,12 @@ Parsing.
                   else if                                          (op($_)) while      (op($_ = c(i)) && precedence[token + $_])  last_was_op = !! (token += $_), ++i;
                   else                                                      while                            (idents[$_ = c(i)])  last_was_op = !! precedence[token += $_], ++i;
 
-                  if (token) if ('sS'.indexOf ($_ = last(path)) > -1 && ';}])'.indexOf (token) > -1) token === ';' && $_ === 'S' ? do_pending () : pop_state (); 
-                             else if (openers[$_])                                                   push_state (predicated[token] ? 'e' : non_predicated[token] ? 's' : token === 'for' ? 'S' :
-                                                                                                                 token === '{' ? 'S' : token === '?' ? '?' : '');
-                             else                                                                    closers[$_].indexOf (token) > -1 ? token === ',' ? do_pending () : pop_state () :
-                                                                                                                                        push_expression_token (token);
-
+                  if (token && ! absorb) if ('sS'.indexOf ($_ = last(path)) > -1 && ';}])'.indexOf (token) > -1) token === ';' && $_ === 'S' ? do_pending () : pop_state (); 
+                                         else if (openers[$_])                                                   push_state (predicated[token] ? 'e' : non_predicated[token] ? 's' : token === 'for' ? 'S' :
+                                                                                                                             token === '{' ? 'S' : token === '?' ? '?' : '');
+                                         else                                                                    closers[$_].indexOf (token) > -1 ? token === ',' ? do_pending () : pop_state () :
+                                                                                                                                                    push_expression_token (token);
+                  absorb && --absorb;
                   token = '';
                                 }
                                 while (path.length > 1) pop_state ();
@@ -487,14 +514,14 @@ Parsing.
 
   return parse;
 }) ({});
-__dsIu6T+jpCJNeb34uElWNmMt7Q0Q/l/TTmZdXwofVfQ
+__wc0Cg+U9yHpLqvWxvRlLHBP5m0e86ENF/tbr2Ms+70o
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__xSDLVrfCT9w6iNFQNJAUuiKNU5uS6NjH6eGCvBwW1Oo');
+meta::code('test', <<'__V3BbWD240PqWRbe2Fmzd6CiSU06VIpHc7O7jtQx+WEM');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -511,6 +538,9 @@ Licensed under the terms of the MIT source code license
   test ('foo . bar . bif . baz');
   test ('foo + bar * bif');
   test ('foo * bar + bif');
+
+  test ('foo ? bar : bif');
+  test ('foo ? bar ? bif : baz : bok');
 
   test ('var x = 5');
   test ('var x = 5, y = 6');
@@ -538,8 +568,6 @@ Licensed under the terms of the MIT source code license
   test ('foo(bif)');
   test ('foo // bif\n(bar)');
   test ('foo /* bar */ (bif)');
-  test ('foo ? bar : bif');
-  test ('foo ? bar ? bif : baz : bok');
   test ('foo("bar + bif")');
   test ('foo("bar\\" + bif\\"")');
   test ('foo(/bar + bif/)');
@@ -547,7 +575,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__xSDLVrfCT9w6iNFQNJAUuiKNU5uS6NjH6eGCvBwW1Oo
+__V3BbWD240PqWRbe2Fmzd6CiSU06VIpHc7O7jtQx+WEM
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
