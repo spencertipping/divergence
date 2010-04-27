@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__hdF67Yz9gjcjqjrHWb2pg6b/g2p8yM7BypLccp9YrJI');
+meta::code('main', <<'__/47FWwQBqSItoKPrIflx4bDWwxdIMj2nh8udZbi1AM0');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -348,17 +348,15 @@ var d = (function (cache) {
            last = function   (xs) {return xs[xs.length - 1]},
              ll = function   (xs) {return last(last(xs))},
 
-     precedence = {'function':0, '[]':1, '.':1, '()':1, 'unew':2, 'u++':3, 'u--':3, 'utypeof':3, 'u~':3, 'u!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6,
+     precedence = {'[]':1, '.':1, '()':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6,
                    '<':7, '>':7, '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, ':':14, '=':15, '+=':15, '-=':15,
-                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ',':16, '{}':17, ';':18, 'if':19, 'for':19, 'while':19, 'do':19, 'try':19, 'catch':19,
-                   'finally':19, 'function':19, 'var':19, 'else':19},
-     predicated = set(qw('if while catch')),
- non_predicated = set(qw('do try finally var const else')),
-    expressions = set(qw('throw return break continue')),
-          right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! unew utypeof u+ u- u++ u--')),
-        unaries = set(qw('++ -- u++ u-- u+ u- u! u~ new typeof <array> <object> var')),
+                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ',':16, '{,': 17, ';':18, 'if': 19},
+     predicated = set(qw('if while catch function')),
+ non_predicated = set(qw('do try finally var const else throw return break continue')),
+          right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
+        unaries = set(qw('++ -- u+ u- ! ~ new typeof <array> <object> var')),
+         naries = set(qw('{ [ () []')),
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
-        openers = set(qw('if while catch do try finally var const else for ? ( [ { function')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
         closers = {'e':';}])', '?':':', '{':'}', 's':'};', 'S':'}'},
       ternaries = {'?': ':'},
@@ -366,7 +364,7 @@ var d = (function (cache) {
            pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'},
 
               s =  function (s) {return s === undefined || s === null ? '' : s.toString ()},
-           norm =  function (o) {return ({'(':'()', '[':'[]', ')':'()', ']':'[]'})[o] || o},
+           norm =  function (o) {return ({'(':'()', '[':'[]'})[o] || o},
              op =  function (o) {return '+-*/%&|^!~=<>?:;.,'.indexOf (o) > -1},
            prec = (function (c) {return function (o) {
                     if (c[o]) return c[o];
@@ -376,6 +374,7 @@ var d = (function (cache) {
          binary = prototype (function (op, rhs, lhs) {this.op = op, this.lhs = lhs, this.rhs = rhs}, {
                              toString: function () {return ',.:'.indexOf (this.op) > -1 ? s(this.lhs) + (this.lhs ? this.op : '') + s(this.rhs) :
                                                                        this.op === '[]' ? s(this.lhs) + '[' + s(this.rhs) + ']' :
+                                                                    predicated[this.op] ? this.op + '(' + s(this.lhs) + ')' + s(this.rhs) :
                                                                         macros[this.op] ? macros[this.op] (this.lhs, this.rhs) :
                                                                       literals[this.op] ? '((' + s(this.lhs) + ')'        + this.op +   '(' + s(this.rhs) + '))' :
                                                                                            '(' + s(this.lhs) + ')' + '["' + this.op + '"](' + s(this.rhs) + ')'}}),
@@ -425,9 +424,9 @@ JavaScript parsing.
 
 Lexing.
   The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
-  logic with a last_was_op flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression). The
-  lexer also determines whether a set of parentheses or square brackets are being used in an invocation or slice; if they are, then it produces the tokens () or [], respectively, rather than
-  just the ( or [ that was read.
+  logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression). The lexer
+  also determines whether a set of parentheses or square brackets are being used in an invocation or slice; if they are, then it produces the tokens () or [], respectively, rather than just
+  the ( or [ that was read.
 
 Parsing.
   There are a few different parse modes we can be in. One of them is the 'expecting a statement' mode, where we look for /for/, predicated things, non-predicated things, and block openers.
@@ -481,55 +480,63 @@ Parsing.
 
   The parser starts off in multi-statement mode (S).
 
-          parse = function (s) {var i = 0, $_, l = s.length, token = '', last_was_op = true, output = [[]], pending = [[]], path = ['S'], absorb = 0, c = function (i) {return s.charAt (i)},
-                                    a = function (t) {last(output).push (unaries[t] ? new   unary (t, last(output).pop ()) :
-                                                                          t === '?' ? new ternary (t, ($_ = last(output).pop ()).rhs, $_.lhs, last(output).pop ()) :
-                                                                                      new  binary (norm(t), last(output).pop (), last(output).pop ()))},
+          parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, expect_call = false, output = [[]], pending = [[]], path = ['S'], absorb = 0,
+                                    c = function (i) {return s.charAt (i)},
+                                    a = function (t) {(naries[t] ? output[output.length - 2] : last(output)).push (
+                                                                                                    naries[t] ? new   unary (t, output.pop (), output.push ([])) :
+                                                                                                   unaries[t] ? new   unary (t, last(output).pop ()) :
+                                                                                                    t === '?' ? new ternary (t, last(output).pop (), last(output).pop (), last(output).pop ()) :
+                                                                                                                new  binary (t, last(output).pop (), last(output).pop ()))},
                         do_precedence = function (t) {while (($_ = ll(pending)) && (right[$_] ? prec($_) < prec(t) : prec($_) <= prec(t))) a(last(pending).pop ())},
                            do_pending = function  () {while (last(pending).length) a(last(pending).pop ())},
-                           push_state = function (s) {output.push ([]), pending.push ([token]), s ? (path.push (s)) : path.push ('e')},
-                            pop_state = function  () {do_pending (); var p = path.pop (); (delegates[p] || delegates.path (p)) (output.pop ()); pending.pop ()},
-                push_expression_token = function (t) {t === 'function' ? push_state ('e') : last_was_op || t === '(' ? (do_precedence (t), last(pending).push (t)) : last(output).push (t)},
-                            delegates = {'s': function (xs) {output[output.length - 1] = last(output).concat (xs)}, 'S': function (xs) {output[output.length - 1] = last(output).concat (xs)},
-                                         'e': function (xs) {output[output.length - 1] = last(output).concat (xs)}, '?': function (xs) {output[output.length - 1] = last(output).concat (xs)},
-                                        path: function  (p) {return function (xs) {last(output).push (new unary (p, xs))}},
-                                         '{': function (xs) {last(output).push (new block (xs))}};
-
+                            pop_state = function (s) {do_pending (); var o = output.pop ();
+                                                      path.pop (), output[output.length - 1] = last(output).concat (o), pending.pop (), s.indexOf (last(path)) > -1 && pop_state (s)};
                 while (i < l && ($_ = c(i))) {
-                       if                                  (/\s/.test ($_))                                                       ++i;
-                  else if       (! last_was_op && '?:(['.indexOf ($_) > -1)                                                       last_was_op = !! (token = norm($_)), ++i;
-                  else if                      ('([{}])'.indexOf ($_) > -1)                                                       last_was_op =  ! (token = $_), ++i;
-                  else if                  ($_ === '/' && c(i + 1) === '*') while  (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
-                  else if                  ($_ === '/' && c(i + 1) === '/') while             (c(++i) !== '\n' && c(i) !== '\r');
-                  else if ($_ === '/' &&    last_was_op &&  (token = '/'))  while (c(++i) !== '/' || c(i - 1) === '\\' || ! ++i)  last_was_op =  ! (token += c(i));
-                  else if ($_ === '"' && ! (last_was_op = ! (token = '"'))) while (c(++i) !== '"' || c(i - 1) === '\\' || ! ++i)  token += c(i);
-                  else if ($_ === "'" && ! (last_was_op = ! (token = "'"))) while (c(++i) !== "'" || c(i - 1) === '\\' || ! ++i)  token += c(i);
-                  else if          (last_was_op && op($_) && (token = 'u')) while      (op($_ = c(i)) && precedence[token + $_])  last_was_op = !! (token += $_), ++i;
-                  else if                                          (op($_)) while      (op($_ = c(i)) && precedence[token + $_])  last_was_op = !! (token += $_), ++i;
-                  else                                                      while                            (idents[$_ = c(i)])  last_was_op = !! precedence[token += $_], ++i;
+                       if                                (/\s/.test ($_))                                                       ++i;
+                  else if                    ('([{}])'.indexOf ($_) > -1)                                                       expect_re =  ! (token = $_), ++i;
+                  else if                ($_ === '/' && c(i + 1) === '*') while  (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
+                  else if                ($_ === '/' && c(i + 1) === '/') while             (c(++i) !== '\n' && c(i) !== '\r');
+                  else if ($_ === '/' &&    expect_re &&  (token = '/'))  while (c(++i) !== '/' || c(i - 1) === '\\' || ! ++i)  expect_re =  ! (token += c(i));
+                  else if ($_ === '"' && ! (expect_re = ! (token = '"'))) while (c(++i) !== '"' || c(i - 1) === '\\' || ! ++i)  token += c(i);
+                  else if ($_ === "'" && ! (expect_re = ! (token = "'"))) while (c(++i) !== "'" || c(i - 1) === '\\' || ! ++i)  token += c(i);
+                  else if          (expect_re && op($_) && (token = 'u')) while      (op($_ = c(i)) && precedence[token + $_])  expect_re = !! (token += $_), ++i;
+                  else if                                        (op($_)) while      (op($_ = c(i)) && precedence[token + $_])  expect_re = !! (token += $_), ++i;
+                  else                                                    while                            (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
 
-                  if (token && ! absorb) if ('sS'.indexOf ($_ = last(path)) > -1 && ';}])'.indexOf (token) > -1) token === ';' && $_ === 'S' ? do_pending () : pop_state (); 
-                                         else if (openers[$_])                                                   push_state (predicated[token] ? 'e' : non_predicated[token] ? 's' : token === 'for' ? 'S' :
-                                                                                                                             token === '{' ? 'S' : token === '?' ? '?' : '');
-                                         else                                                                    closers[$_].indexOf (token) > -1 ? token === ',' ? do_pending () : pop_state () :
-                                                                                                                                                    push_expression_token (token);
-                  absorb && --absorb;
+                  if (token && --absorb < 0)
+                    if ('sS'.indexOf (last(path)) > -1)
+                           if (closers[last(path)].indexOf (token) > -1) pop_state ('s'), expect_call = false;
+                      else if                        (predicated[token]) absorb = 1, output.push ([], []),  pending.push ([token], []), path.push ('s', 'e');
+                      else if                    (non_predicated[token])             output.push ([]),      pending.push ([token]),          path.push ('s');
+                      else if                              (pair[token])             output.push ([]),      pending.push ([token]),          path.push (token === '{' ? 'S' : 'e');
+                      else if                           (unaries[token])             output.push ([]),      pending.push ([token]),          path.push ('e');
+                      else                                                           output.push ([token]), pending.push ([]),               path.push ('e');
+                    else if ('e?{'.indexOf (last(path)) > -1)
+                           if (closers[last(path)].indexOf (token) > -1) expect_call = true, pop_state (last(path) === '?' ? '' : '');
+                      else if                        (predicated[token]) expect_call = false, absorb = 1, output.push ([], []),  pending.push ([token], []), path.push ('s', 'e');
+                      else if                            (token === '?') expect_call = false, do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('?');
+                      else if               (expect_call && pair[token]) expect_call = false, do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('e');
+                      else if                              (pair[token])           output.push ([]),      pending.push ([]),          path.push (token === '{' ? '{' : 'e');
+                      else if      (last(path) === '{' && token === ',') token = '{,', do_precedence (token), last(pending).push (token);
+                      else if                        (precedence[token]) expect_call = false, do_precedence (token), last(pending).push (token);
+                      else                                               last(output).push (token);
+
                   token = '';
                                 }
-                                while (path.length > 1) pop_state ();
+                                while (path.length > 1) pop_state ('s');
                                 do_pending ();
-                                return output.pop ().toSource ()};
+                                return ($_ = output.pop ())[0].toString () + ' (derivation is ' + $_.toSource () + ')'};
 
   return parse;
 }) ({});
-__hdF67Yz9gjcjqjrHWb2pg6b/g2p8yM7BypLccp9YrJI
+__/47FWwQBqSItoKPrIflx4bDWwxdIMj2nh8udZbi1AM0
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__V3BbWD240PqWRbe2Fmzd6CiSU06VIpHc7O7jtQx+WEM');
+meta::code('test', <<'__OXYCjNxFHGS6VhbGDc/hA/YeSwQ1ZKpgyEENPicdlrU');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -540,7 +547,7 @@ Licensed under the terms of the MIT source code license
 
   var trace        = function (x) {print (x); return x};
 
-  var test         = function (s) {print (d (s))};
+  var test         = function (s) {print (s + '  =>  ' + d (s))};
 
   test ('foo.bar.bif.baz');
   test ('foo . bar . bif . baz');
@@ -583,7 +590,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__V3BbWD240PqWRbe2Fmzd6CiSU06VIpHc7O7jtQx+WEM
+__OXYCjNxFHGS6VhbGDc/hA/YeSwQ1ZKpgyEENPicdlrU
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
