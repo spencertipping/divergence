@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__/47FWwQBqSItoKPrIflx4bDWwxdIMj2nh8udZbi1AM0');
+meta::code('main', <<'__6XrZrwOvWiqALAIjIkzXahhoyOORkW8qxsX0YnNSo+o');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -354,7 +354,7 @@ var d = (function (cache) {
      predicated = set(qw('if while catch function')),
  non_predicated = set(qw('do try finally var const else throw return break continue')),
           right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
-        unaries = set(qw('++ -- u+ u- ! ~ new typeof <array> <object> var')),
+        unaries = set(qw('++ -- u+ u- ! ~ new typeof')),
          naries = set(qw('{ [ () []')),
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
@@ -490,7 +490,7 @@ Parsing.
                         do_precedence = function (t) {while (($_ = ll(pending)) && (right[$_] ? prec($_) < prec(t) : prec($_) <= prec(t))) a(last(pending).pop ())},
                            do_pending = function  () {while (last(pending).length) a(last(pending).pop ())},
                             pop_state = function (s) {do_pending (); var o = output.pop ();
-                                                      path.pop (), output[output.length - 1] = last(output).concat (o), pending.pop (), s.indexOf (last(path)) > -1 && pop_state (s)};
+                                                      path.pop (), output[output.length - 1] = last(output).concat (o), pending.pop (), path.length > 1 && s.indexOf (last(path)) > -1 && pop_state (s)};
                 while (i < l && ($_ = c(i))) {
                        if                                (/\s/.test ($_))                                                       ++i;
                   else if                    ('([{}])'.indexOf ($_) > -1)                                                       expect_re =  ! (token = $_), ++i;
@@ -504,39 +504,33 @@ Parsing.
                   else                                                    while                            (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
 
                   if (token && --absorb < 0)
-                    if ('sS'.indexOf (last(path)) > -1)
-                           if (closers[last(path)].indexOf (token) > -1) pop_state ('s'), expect_call = false;
-                      else if                        (predicated[token]) absorb = 1, output.push ([], []),  pending.push ([token], []), path.push ('s', 'e');
-                      else if                    (non_predicated[token])             output.push ([]),      pending.push ([token]),          path.push ('s');
-                      else if                              (pair[token])             output.push ([]),      pending.push ([token]),          path.push (token === '{' ? 'S' : 'e');
-                      else if                           (unaries[token])             output.push ([]),      pending.push ([token]),          path.push ('e');
-                      else                                                           output.push ([token]), pending.push ([]),               path.push ('e');
-                    else if ('e?{'.indexOf (last(path)) > -1)
-                           if (closers[last(path)].indexOf (token) > -1) expect_call = true, pop_state (last(path) === '?' ? '' : '');
-                      else if                        (predicated[token]) expect_call = false, absorb = 1, output.push ([], []),  pending.push ([token], []), path.push ('s', 'e');
-                      else if                            (token === '?') expect_call = false, do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('?');
-                      else if               (expect_call && pair[token]) expect_call = false, do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('e');
-                      else if                              (pair[token])           output.push ([]),      pending.push ([]),          path.push (token === '{' ? '{' : 'e');
-                      else if      (last(path) === '{' && token === ',') token = '{,', do_precedence (token), last(pending).push (token);
-                      else if                        (precedence[token]) expect_call = false, do_precedence (token), last(pending).push (token);
-                      else                                               last(output).push (token);
+                         if               (closers[last(path)].indexOf (token) > -1) pop_state (token === ';' ? 'es' : ''), expect_call = false;
+                    else if                                      (predicated[token]) absorb = 1, output.push ([], []), pending.push ([token], []), path.push ('s', 'e');
+                    else if                 (non_predicated[token] || pair[token] ||
+                            ($_ = unaries[token]) && 'sS'.indexOf (last(path)) > -1) output.push ([]), pending.push ([token]), path.push ($_ ? 'e' : 's');
+                    else if                                            (pair[token]) output.push ([]), pending.push ([token]), path.push (token === '{' ? last(path) === '{' ? '{' : 'S' : 'e');
+                    else if                             (expect_call && pair[token]) do_precedence (token), last(pending).push (norm(token)), output.push ([]), pending.push ([]), path.push ('e');
+                    else if                                          (token === '?') do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('?');
+                    else if                    (last(path) === '{' && token === ',') token = '{,', do_precedence (token), last(pending).push (token);
+                    else if                                      (precedence[token]) do_precedence (token), last(pending).push (token);
+                    else                                                             last(output).push (token);
 
                   token = '';
                                 }
-                                while (path.length > 1) pop_state ('s');
+                                while (path.length > 1) pop_state ('');
                                 do_pending ();
                                 return ($_ = output.pop ())[0].toString () + ' (derivation is ' + $_.toSource () + ')'};
 
   return parse;
 }) ({});
-__/47FWwQBqSItoKPrIflx4bDWwxdIMj2nh8udZbi1AM0
+__6XrZrwOvWiqALAIjIkzXahhoyOORkW8qxsX0YnNSo+o
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__OXYCjNxFHGS6VhbGDc/hA/YeSwQ1ZKpgyEENPicdlrU');
+meta::code('test', <<'__nJSREMAy1yx1m80xvHb5texMZcFSbNFCOehmDFSFi+E');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -553,6 +547,10 @@ Licensed under the terms of the MIT source code license
   test ('foo . bar . bif . baz');
   test ('foo + bar * bif');
   test ('foo * bar + bif');
+
+  test ('while (foo) bar;');
+
+  test ('x + function () {return y + 5}');
 
   test ('foo ? bar : bif');
   test ('foo ? bar ? bif : baz : bok');
@@ -590,7 +588,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__OXYCjNxFHGS6VhbGDc/hA/YeSwQ1ZKpgyEENPicdlrU
+__nJSREMAy1yx1m80xvHb5texMZcFSbNFCOehmDFSFi+E
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
