@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__bejhv9NFWPQAj+PC9nWfz1YaqcpUgxBJuBBiad3DW9g');
+meta::code('main', <<'__+tn7zCoR4PYtKmrg0rjF633U4wQzHTg/v2D6xCGnW5c');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -301,14 +301,25 @@ Semigroup properties.
 Operators.
   Because functions in JavaScript must compile into a valid JavaScript parse tree, there are some limitations placed on the operators that can be overloaded. In particular, one cannot create
   new operators arbitrarily, so defining the binary ++ operator to concatenate arrays, for example, would be invalid. However, by (mis)using the $ character (which parses as an identifier, but
-  when sandwiched between two binary operators is considered by Divergence to be a part of those binary operators), we can create new compound operators that widen our options:
+  when sandwiched between two binary operators is considered by Divergence to be a part of those binary operators -- see the set 'sandwiches' below), we can create new compound operators that
+  widen our options:
 
     | x >$> (x + 1)             // the lambda operator (which is a macro; see below)
     | x >$+ 'foo'               // an operator whose behavior has yet to be defined
     | x <<$* [1, 2, 3]          // ditto
     | x +$+ [1, 2, 3]           // maybe this will be an acceptable alternative to ++
+    | x +_$% {foo: 'bar'}       // you can also use up to three of the '_' and '$' characters, as long as all '$' come after '_'
 
-  The only rule put into place is that you can't use lvalue-sensitive operators (these include assignment operators, ++, and --). Other than that, you're free to overload as many of these
+  You can create new sandwich identifiers. For example, suppose you wanted to use the operator +d+. Then you'd say this:
+
+    | d.sandwich ('d');
+
+  This would impose the limitation that you wouldn't be able to refer to 'd' in the middle of a set of binary operations, no matter how deeply parenthesized (because parens are erased by
+  SpiderMonkey's function deparser) -- but you could use it to begin an expression. You can also alias it in cases where it is needed:
+
+    | (dPrime >$> (x >> dPrime >> foo)) (d)
+
+  The only hard rule put into place is that you can't use lvalue-sensitive operators (these include assignment operators, ++, and --). Other than that, you're free to overload as many of these
   operators as you'd like. Their precedence, however, is determined by JavaScript's precedence rules; this is a necessary evil because SpiderMonkey's toString() function removes unnecessary
   parentheses. If the >$> operator were assumed to have precedence equivalent to =, for example, then you would be unable to define the expression (x >$> x) < 5 because the () around >$> would
   be erased. So unfortunately it has relational-operator precedence, making it necessary to say x >$> (x < 5) rather than the more convenient x >$> x < 5.
@@ -318,10 +329,6 @@ Operators.
   Divergence takes liberties to parse certain expressions as long-form operators; in particular, unary negation will be interpreted as being part of the preceding operator rather than a
   negation. This works out OK for numbers, since the operators '+-', '*-', etc. are defined to do the right thing. But it does mean that when you're defining your own numerical operators
   you'll need to watch out for this.
-
-Restrictions on operator overloading.
-  You cannot overload operators that require the left-hand-side to be an lvalue. These will be translated into their full form for consistency (e.g. x += 1 to x = x + 1) in a precedence-aware
-  way before expanding the operators into method calls. By implication, then, the [] operator is off-limits since there would then be no way to assign to indirected slots.
 
 Macros.
   Sometimes you want to write an operator or function that has the ability to rewrite code. Fortunately, this is quite a straightforward process. The >$> macro is one such construct, and it is
@@ -336,9 +343,10 @@ Macros.
   That macro would transform any occurrences of the expression foo(3 + 5, x, y + 1) into the code (3 + 5) + x * (y + 1).
 
   There are a couple of reasons I decided to go with this somewhat weak macro model. The first is that this code is likely to be compiled each time the JavaScript is loaded (though you can
-  always call toString() on the resulting function to grab its source and save it for later), and the second is that an overuse of macros can be detrimental to code maintainability.
+  always call toString() on the resulting function to grab its source and save it for later), so it's important to minimize the overhead of processing it; the second is that an overuse of
+  macros can be detrimental to code maintainability. (Though far be it from me to try to protect programmers from themselves.)
 
-  Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds, but operators don't.
+  Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds but operators don't.
 
 var d = (function (cache) {
   var        qw = function  (s) {return s.split (' ')},
@@ -359,6 +367,7 @@ var d = (function (cache) {
          naries = set(qw('{ [ () []')),
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof :')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
+     sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
         closers = {'e':';}])', '?':':', '{':'}', 's':'};', 'S':'}'},
       ternaries = {'?': ':'},
          macros = {'<object>': function (x) {return '{' + x + '}'}, '<array>': function (x) {return '[' + x + ']'}},
@@ -458,7 +467,7 @@ Parsing.
 
   return parse;
 }) ({});
-__bejhv9NFWPQAj+PC9nWfz1YaqcpUgxBJuBBiad3DW9g
+__+tn7zCoR4PYtKmrg0rjF633U4wQzHTg/v2D6xCGnW5c
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
