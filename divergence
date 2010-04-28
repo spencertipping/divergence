@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__8he+sxfh8GEVAM3/neZUXLuHKIMvcCD26np6NP5YeRU');
+meta::code('main', <<'__7kChUVMBoxzNkTD0HbdlDyixHTev7dUYnU3QTjrAwXo');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -426,61 +426,9 @@ JavaScript parsing.
 
 Lexing.
   The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
-  logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression). The lexer
-  also determines whether a set of parentheses or square brackets are being used in an invocation or slice; if they are, then it produces the tokens () or [], respectively, rather than just
-  the ( or [ that was read.
+  logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression).
 
 Parsing.
-  There are a few different parse modes we can be in. One of them is the 'expecting a statement' mode, where we look for /for/, predicated things, non-predicated things, and block openers.
-  When we find one of these operators, we push our state (the output queue and pending queue), and push the trigger element onto the path. (This lets us preserve context for the next
-  'operand', if there is one.)
-
-  Another mode is the 'expecting an expression' mode, which exits if we hit a ;. It also exits if we hit a , and the last element on the path is an object literal opener. So the difference
-  between 'pending' and 'path' is that 'pending' represents unprocessed operators for this processing mode, and 'path' indicates the mode that we're in. 'output' maintains a queue of elements
-  for the current state. When we transition out of the current state, pending operations are performed and then the output queue (a doubly-indirected structure just like 'pending') is passed
-  to the delegate for the state we're in. (This makes it simpler to process argument lists, object literals, and so forth.)
-
-  The third mode is 'waiting for the : to a ?' mode, which munches everything until the next ':'. Technically this isn't quite correct, but the incorrect cases will be filtered out by the
-  initial JavaScript parse. It ends up treating the ? as a type of opening paren, and thus expects a : to close it.
-
-  Here are some cases.
-
-    Case 1. We're in statement mode and encounter the word 'var'. Then we push our state, put 'var' onto the pending stack (as a prefix unary operator), put 'e' on the path, and continue. Once
-            we hit the closer ';', we reduce all pending operations, apply 'var' to the remaining output, and push that single output element onto the list of outputs from the previous run.
-            Then we pop the 'e' off of the path and pop the empty output and pending arrays.
-
-    Case 2. We're in statement mode and encounter the word 'if'. We'll need to parse two different things, first an expression and then a single statement. This isn't too difficult; we just
-            need to push both states in the right order. We push the current state, put the 'if' onto the pending queue, put an 's' on the path, push the state again, and put an 'e' on the
-            path. We also absorb the next token, an open-paren, and go to parse the expression. It will exit on the close-paren and pop its state onto the end of the parent state's output
-            queue, then will parse a single statement. When that statement finishes parsing the pending queue will be run, and this will finish with the 'if' that was pushed in the beginning.
-            The state is popped and the single statement on the output queue is pushed onto the parent state's output.
-
-    Case 3. We're in statement mode and encouter the word 'function'. Since we don't parse the statement-form of 'function', we know this should be interpreted as an expression. We push our
-            state, push an 'e' onto the path, push the word 'function' onto the pending queue, push our state again, push an 's' onto the path, push our state once more, push an 'e' onto the
-            path, and absorb an open paren. (The logic is similar to 'if', except with the extra transition into expression-mode.) The word 'function' has top precedence, so the next operator
-            will cause it to bind to the two topmost output items, the argument list and the body.
-
-    Case 4. We're in expression mode and encounter the symbol ';'. This is in the closers for the path 'e', so we process all operations on the pending queue and pop our state, pushing the
-            output element onto the parent's output queue.
-
-    Case 5. We're in single-statement mode and encounter the symbol '{'. We push our state and push 'S' onto the path (indicating that we don't quit when we hit a ';'). Then we parse until we
-            hit the closer '}'. This isn't the end, unfortunately. When we pop and push onto the parent's output, we wrap the separate statements in a block constructor and check the parent
-            state. If the state is 's', then we pop out of that one too; otherwise we just leave it. This handles the single-statement case present on if-blocks (they aren't terminated by a
-            semicolon, but the 'if' just takes one block).
-
-    Case 6. We're in expression mode and encounter the symbol '{'. We push our state and push '{' onto the path. This is a special form of expression mode where ':' and ',' act as
-            left-associative infix binary operators whose precedences are the two lowest. When the '}' is encountered, we process all pending operations, wrap the result in an object
-            constructor, and pop the state, pushing the single constructed object onto the parent output queue.
-
-  All of this means that the logic for closers such as }, ], and ) is this. Any one of those will run the pending queue until we hit the corresponding opener. If we never do (leaving the
-  pending queue empty), then we pop the state and delegate to the state transition handler specified by the above cases. Note that as yet we haven't pushed the opener, so we do this after the
-  state has been popped. What this means is that absorbing the open-paren or what-not actually means that we push it onto the parent pending queue so that it will match up with the closer that
-  gets us out of the child queue.
-
-  In other words, to set up a balanced paren read, we take the open-paren in the current state and then push the state, leaving a paren balance of 1. The final close paren will exit the new
-  state and match the one we have, which should do exactly what we want since we have only one element.
-
-  The parser starts off in multi-statement mode (S).
 
           parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, expect_call = false, output = [[]], pending = [[]], path = ['S'], absorb = 0,
                                     c = function (i) {return s.charAt (i)},
@@ -505,19 +453,7 @@ Parsing.
                   else if                                        (op($_)) while      (op($_ = c(i)) && precedence[token + $_])  expect_re = !! (token += $_), ++i;
                   else                                                    while                            (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
 
-                  if       (! token) continue;
-                  if (--absorb >= 0) continue;
-
-                       if               (closers[last(path)].indexOf (token) > -1) pop_state (token === ';' ? 'es' : ''), expect_call = false;
-                  else if                                      (predicated[token]) absorb = 1, output.push ([], []), pending.push ([token], []), path.push ('s', 'e');
-                  else if                 (non_predicated[token] || pair[token] ||
-                          ($_ = unaries[token]) && 'sS'.indexOf (last(path)) > -1) output.push ([]), pending.push ([token]), path.push ($_ ? 'e' : 's');
-                  else if                                            (pair[token]) output.push ([]), pending.push ([token]), path.push (token === '{' ? last(path) === '{' ? '{' : 'S' : 'e');
-                  else if                             (expect_call && pair[token]) do_precedence (token), last(pending).push (norm(token)), output.push ([]), pending.push ([]), path.push ('e');
-                  else if                                          (token === '?') do_precedence (token), last(pending).push (token), output.push ([]), pending.push ([]), path.push ('?');
-                  else if                    (last(path) === '{' && token === ',') token = '{,', do_precedence (token), last(pending).push (token);
-                  else if                                      (precedence[token]) do_precedence (token), last(pending).push (token);
-                  else                                                             last(output).push (token);
+                  if (! token || --absorb >= 0) continue;
 
                   token = '';
                                 }
@@ -527,7 +463,7 @@ Parsing.
 
   return parse;
 }) ({});
-__8he+sxfh8GEVAM3/neZUXLuHKIMvcCD26np6NP5YeRU
+__7kChUVMBoxzNkTD0HbdlDyixHTev7dUYnU3QTjrAwXo
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
