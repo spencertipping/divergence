@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__4CwjKTBHseMHBwJ+nIjvLSzJhk6gBX6tKzcaxTEnuH4');
+meta::code('main', <<'__lY7MNoRS1pQFNGgXN4UN2/hfFJ8tQDJwkASeZXD/wDE');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -361,7 +361,7 @@ var d = (function (cache) {
 
      precedence = {'[]':1, '.':1, '()':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6,
                    '<':7, '>':7, '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, ':':14, '=':15, '+=':15, '-=':15,
-                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18},
+                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18, '{':19, '[':19, '(':19},
      predicated = set(qw('if while catch function switch')),
  non_predicated = set(qw('do try finally var const else break continue throw return case')),
           right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
@@ -369,27 +369,27 @@ var d = (function (cache) {
        literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
-      ternaries = {'?': ':'},
-           pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'},
+          opens = set(qw('( [ { ?')),
+           pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{', '?':':'},
             ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
+         macros = {},
 
-          arity = function        (op) {return op === null ? 1 : unaries[op] || non_predicated[op] ? 1 : binaries[op] || predicated[op] ? 2 : 3},
+          arity = function        (op) {return op === null ? 1 : unaries[op] || non_predicated[op] ? 1 : op !== '?' ? 2 : 3},
          syntax = function (p, op, xs) {xs || (xs = []);
                            return {xs: xs, op: op,
                                    value: function (x) {return xs.push (x), p && xs.length >= arity(op) ? p.value (this) : this},
                                 is_value: function  () {return xs.length >= arity(op)},
                                 sandwich: function  () {return xs.length === 2 ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
                                     verb: function (x) {return op ? precedence[x] + !! right[x] <= precedence[op] ?
-                                                                      (p || (p = syntax().value (this))).op(x) : xs.push ($ = syntax (this, null, [xs.pop ()])) && $ : (op = x) && this},
+                                                                      (p || (p = syntax().value (this))).verb(x) : xs.push ($ = syntax (this, null, [xs.pop ()])) && $ : (op = x) && this},
                                    shake: function  () {return xs.length === 2 ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]) :
-                                                                                 xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op, [xs[0], xs[1].xs[0]]) :
-                                                                               this},
+                                                                                 xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op, [xs[0], xs[1].xs[0]]) : this : this},
                                 toString: function (n) {return ! op && ! xs.length ? '' :
                                                                 precedence[op] > n ? '(' + this.toString(precedence[op]) + ')' :
                                                                     predicated[op] ? op + '(' + xs[0].toString (20) + ')' + xs[1].toString (20) :
                                                                 non_predicated[op] ? op + ' ' + xs[0].toString (precedence[op] || n) :
                                                                         macros[op] ? macros[op].apply (this, xs) :
-                                                                                     xs[0].toString (precedence[op] || n) + op + xs[1].toString (precedence[op] || n)}}},
+                                                                                     xs[0].toString (precedence[op] || n) + '["' + op + '"](' + xs[1].toString (20) + ')'}}},
 
 JavaScript parsing.
   I'm using an inlined recursive-descent parser with flattened states and a streaming lexer to parse the source code. This is basically the same thing as a regular recursive-descent parser
@@ -424,48 +424,40 @@ Lexing.
 Parsing.
   There are some 
 
-  parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, expect_call = false, absorb = 0, escaped = false, output = [[]], pending = [[]],
-                            c = function (i) {return s.charAt (i)},
-                            a = function (t) {(naries[t] ? output[output.length - 2] : last(output)).push (
-                                                                                            naries[t] ? new   unary (t, output.pop (), output.push ([])) :
-                                                                                           unaries[t] ? new   unary (t, last(output).pop ()) :
-                                                                                            t === '?' ? new ternary (t, last(output).pop (), last(output).pop (), last(output).pop ()) :
-                                                                                                        new  binary (t, last(output).pop (), last(output).pop ()))},
-                do_precedence = function (t) {while (($_ = ll(pending)) && (right[$_] ? prec($_) < prec(t) : prec($_) <= prec(t))) a(last(pending).pop ())},
-                   do_pending = function  () {while (last(pending).length) a(last(pending).pop ())};
-        while (i < l && ($_ = c(i))) {
-          escaped = false;
-          if (--pushed >= 0) 
-                 if                                (/\s/.test ($_))                                                      ++i;
-            else if                    ('([{}])'.indexOf ($_) > -1)                                                      expect_re =  ! (token = $_), ++i;
-            else if                ($_ === '/' && c(i + 1) === '*') while (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
-            else if                ($_ === '/' && c(i + 1) === '/') while            (c(++i) !== '\n' && c(i) !== '\r');
-            else if ($_ === '/' &&    expect_re &&  (token = '/'))  while   (($_ = c(++i)) !== '/' || escaped || ! ++i)  expect_re =  ! (token += c(i)), escaped = ! escaped && $_ === '\\';
-            else if ($_ === '"' && ! (expect_re = ! (token = '"'))) while   (($_ = c(++i)) !== '"' || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
-            else if ($_ === "'" && ! (expect_re = ! (token = "'"))) while   (($_ = c(++i)) !== "'" || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
-            else if         (expect_re && ops[$_] && (token = 'u')) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
-            else if                                       (ops[$_]) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
-            else                                                    while                           (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
+  parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, absorb = 0, escaped = false, elements = [syntax()], c = function (i) {return s.charAt (i)};
+                        while (i < l && ($_ = c(i))) {
+          escaped = !! (token = '');
+               if                                (/\s/.test ($_))                                                      ++i;
+          else if                    ('([{}])'.indexOf ($_) > -1)                                                      expect_re =  ! (token = $_), ++i;
+          else if                ($_ === '/' && c(i + 1) === '*') while (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
+          else if                ($_ === '/' && c(i + 1) === '/') while            (c(++i) !== '\n' && c(i) !== '\r');
+          else if ($_ === '/' &&    expect_re &&  (token = '/'))  while   (($_ = c(++i)) !== '/' || escaped || ! ++i)  expect_re =  ! (token += c(i)), escaped = ! escaped && $_ === '\\';
+          else if ($_ === '"' && ! (expect_re = ! (token = '"'))) while   (($_ = c(++i)) !== '"' || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
+          else if ($_ === "'" && ! (expect_re = ! (token = "'"))) while   (($_ = c(++i)) !== "'" || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
+          else if         (expect_re && ops[$_] && (token = 'u')) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
+          else if                                       (ops[$_]) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
+          else                                                    while                           (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
 
           if (! token || --absorb >= 0) continue;
 
-          
-
-          token = '';
+               if ('(['.indexOf (token) > -1 && last(elements).is_value ()) elements[elements.length - 1] = last(elements).verb (token);
+          else if                                            (opens[token]) elements.push (syntax(last(elements), token));
+          else if                                             (pair[token]) elements[elements.length - 1] = elements[elements.length - 1].value (elements.pop ());
+          else if (non_predicated[token] || predicated[token] || expect_re) elements[elements.length - 1] = last(elements).verb (token);
+          else                                                              elements[elements.length - 1] = last(elements).value (token);
                         }
-                        do_pending ();
-                        return ($_ = output.pop ())[0].toString () + ' (derivation is ' + $_.toSource () + ')'};
+                        return elements.pop().shake().toString (0)};
 
   return parse;
 }) ({});
-__4CwjKTBHseMHBwJ+nIjvLSzJhk6gBX6tKzcaxTEnuH4
+__lY7MNoRS1pQFNGgXN4UN2/hfFJ8tQDJwkASeZXD/wDE
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__TU4SMn/RXbSniSL+9OMZvajL1mYcPSPwVLa501r3k7k');
+meta::code('test', <<'__4n268T6HubSjfxCoaTvvw6DbU1Vo68GXruVVZ1/f6Ls');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -483,7 +475,7 @@ Licensed under the terms of the MIT source code license
   test ('foo + bar * bif');
   test ('foo * bar + bif');
 
-  test ('x + function () {return y + 5}');
+//  test ('x + function () {return y + 5}');
 
   test ('foo ? bar : bif');
   test ('foo ? bar ? bif : baz : bok');
@@ -521,7 +513,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__TU4SMn/RXbSniSL+9OMZvajL1mYcPSPwVLa501r3k7k
+__4n268T6HubSjfxCoaTvvw6DbU1Vo68GXruVVZ1/f6Ls
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
