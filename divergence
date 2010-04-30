@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__WjPOwqNQhNSJA3FpAGf7Df4fle/uS2I83ZBlQEF8kaM');
+meta::code('main', <<'__uL/boP1G7mkxsSQFxEqOcENLCh+78qbk2H0LLX0xPT8');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -241,11 +241,9 @@ Language.
 
   Things Divergence doesn't support:
 
-    | 1. Switch/case. This is because I'm too lazy to implement parsing for it.
-    | 2. 'Standard form' function definitions. Functions need to be declared as vars rather than as 'function foo () {...}'.
-    | 3. Labels and named break/continue.
-    | 4. Prefix - and + operators inside expressions, including negative number literals. These are interpreted as belonging to the preceding operator.
-    | 5. Some edge cases regarding /new/ and /typeof/. The JavaScript grammar is squirrelly about these cases, and I haven't yet figured out why.
+    | 1. 'Standard form' function definitions. Functions need to be declared as vars rather than as 'function foo () {...}'.
+    | 2. Post-increment and decrement. These are converted to pre-increment/decrement.
+    | 3. Some edge cases regarding /new/ and /typeof/. The JavaScript grammar is squirrelly about these cases, and I haven't yet figured out why.
 
   It will probably support these at some point in the future.
 
@@ -434,7 +432,7 @@ Lexing.
 
   return parse;
 }) ({});
-__WjPOwqNQhNSJA3FpAGf7Df4fle/uS2I83ZBlQEF8kaM
+__uL/boP1G7mkxsSQFxEqOcENLCh+78qbk2H0LLX0xPT8
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
