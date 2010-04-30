@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__lY7MNoRS1pQFNGgXN4UN2/hfFJ8tQDJwkASeZXD/wDE');
+meta::code('main', <<'__J5i+F3n84EC5duca0nd6PxBZDC09/G5Gfp+kfYeE668');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -231,7 +231,7 @@ Language.
 
          What was a comparison will now have the overhead of a method call.
 
-    | 2. Divergence supports macro operators. USE THESE SPARINGLY! The >$> operator is a built-in macro that builds a function. This has the result that no object can overload >$>, since it
+    | 2. Divergence supports macro operators. Use these sparingly! The >$> operator is a built-in macro that builds a function. This has the result that no object can overload >$>, since it
          will never be present in generated code (unless a macro puts it there, which would be confusing). Much more readable in the general case is the prefix macro form:
 
          | some_macro(foo, bar, bif)
@@ -334,7 +334,7 @@ Macros.
   Sometimes you want to write an operator or function that has the ability to rewrite code. Fortunately, this is quite a straightforward process. The >$> macro is one such construct, and it is
   defined like this:
 
-    | d.infix ('>$>', function (x, y) {return '(function(' + x + '){return ' + y + '})'});
+    | d.infix ('>$>', function (xs) {return '(function(' + xs[0] + '){return ' + xs[1] + '})'});
 
   Prefix macros can also be defined. They resemble normal function calls and look like this:
 
@@ -350,69 +350,51 @@ Macros.
 
 var d = (function (cache) {
   var        qw = function    (s) {return s.split (' ')},
-            set = function   (xs) {return init ({}, function () {for (var i = 0, l = xs.length; i < l; ++i) this[xs[i]] = true})},
-           init = function    (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.constructor === Function) $_.call (o);
-                                                                                                            else                             for (var k in $_) o[k] = $_[k]; return o},
-      prototype = function (f, p) {return init (f, function () {init (this.prototype, p)})},
+            set = function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
            last = function   (xs) {return xs[xs.length - 1]},
-             ll = function   (xs) {return last(last(xs))},
-              s =  function   (s) {return s === undefined || s === null ? '' : s.toString ()},
+              s = function (s, n) {return s === undefined || s === null ? '' : s.toString (n)},
               $ = null,
 
-     precedence = {'[]':1, '.':1, '()':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6,
-                   '<':7, '>':7, '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, ':':14, '=':15, '+=':15, '-=':15,
-                   '*=':15, '/=':15, '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18, '{':19, '[':19, '(':19},
+     precedence = {'[!':1, '.':1, '(!':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7, '>':7, '<=':7,
+                   '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15, '%=':15,
+                   '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18, '{':19, '[':19, '(':19},
      predicated = set(qw('if while catch function switch')),
- non_predicated = set(qw('do try finally var const else break continue throw return case')),
+ non_predicated = set(qw('do try finally var const else break continue throw return case ++ -- ~ ! new typeof')),
           right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
         unaries = set(qw('++ -- u+ u- ! ~ new typeof')),
-       literals = set(qw('= += -= *= /= %= ^= |= &= <<= >>= >>>= , && || === !== u! unew [] instanceof in typeof')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
           opens = set(qw('( [ { ?')),
            pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{', '?':':'},
             ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
-         macros = {},
+ literal_binary = set(qw('= ; ,')),
+         macros = {'{': function (xs) {return '{' + xs.toString (20) + '}'}, '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], 20) + ':' + s(xs[2], n)}},
 
-          arity = function        (op) {return op === null ? 1 : unaries[op] || non_predicated[op] ? 1 : op !== '?' ? 2 : 3},
+          arity = function        (op) {return op === null ? 1 : unaries[op] || non_predicated[op] ? 1 : op === '?' ? 3 : 2},
          syntax = function (p, op, xs) {xs || (xs = []);
-                           return {xs: xs, op: op,
-                                   value: function (x) {return xs.push (x), p && xs.length >= arity(op) ? p.value (this) : this},
-                                is_value: function  () {return xs.length >= arity(op)},
-                                sandwich: function  () {return xs.length === 2 ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
-                                    verb: function (x) {return op ? precedence[x] + !! right[x] <= precedence[op] ?
-                                                                      (p || (p = syntax().value (this))).verb(x) : xs.push ($ = syntax (this, null, [xs.pop ()])) && $ : (op = x) && this},
-                                   shake: function  () {return xs.length === 2 ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]) :
-                                                                                 xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op, [xs[0], xs[1].xs[0]]) : this : this},
-                                toString: function (n) {return ! op && ! xs.length ? '' :
-                                                                precedence[op] > n ? '(' + this.toString(precedence[op]) + ')' :
-                                                                    predicated[op] ? op + '(' + xs[0].toString (20) + ')' + xs[1].toString (20) :
-                                                                non_predicated[op] ? op + ' ' + xs[0].toString (precedence[op] || n) :
-                                                                        macros[op] ? macros[op].apply (this, xs) :
-                                                                                     xs[0].toString (precedence[op] || n) + '["' + op + '"](' + xs[1].toString (20) + ')'}}},
+                    return {xs: xs, op: op,
+                            value: function (x) {return xs.push (x), x.parent_to && x.parent_to (this), this},
+                        parent_to: function (x) {return p = x, this},
+                         is_value: function  () {return xs.length >= arity(op)},
+                             verb: function (x) {return op ? precedence[x] >= precedence[op] + !! right[x] ?
+                                                               (p || (p = syntax()).value (this)).verb(x) : xs.push ($ = syntax (this, null, [xs.pop ()]).verb (x)) && $ : (op = x) && this},
+                         sandwich: function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
+                            shake: function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]) :
+                                                                         xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op, [xs[0], xs[1].xs[0]]) : this : this},
+                              top: function  () {return p || this},
+                         toString: function (n) {return ! op && ! xs.length ? '' :
+                                                                       ! op ? s(xs[0], n) :
+                                                                 macros[op] ? macros[op].call (this, xs, n) :
+                                                         precedence[op] > n ? '(' + this.toString(precedence[op]) + ')' :
+                                                             predicated[op] ? op + '(' + s(xs[0], 20) + ')' + s(xs[1], 20) :
+                                                         non_predicated[op] ? op + ' ' + s(xs[0], precedence[op] || n) :
+                                                         literal_binary[op] ? s(xs[0], precedence[op] || n) + op + s(xs[1], precedence[op] || n) :
+                                                                              s(xs[0], precedence[op] || n) + '["' + op + '"](' + s(xs[1], 20) + ')'}}},
 
 JavaScript parsing.
   I'm using an inlined recursive-descent parser with flattened states and a streaming lexer to parse the source code. This is basically the same thing as a regular recursive-descent parser
   that delegates to a shunting yard algorithm for arithmetic parsing, except that it takes a bunch of shortcuts derived from the knowledge that the input is already well-formed. Well-formed
   input means that we can actually parse a much more general language than JavaScript, and this results in a more compact parser.
-
-  Here is the optimized state diagram:
-
-    |     expression ::= ( <expression> )
-                         [ <expression> ]
-                         { <expression> }
-                         <predicated> <expression> <expression>
-                         <non_predicated> <expression>
-                         ;
-                         <expression> <binary_op> <expression>
-                         <expression> ? <expression> : <expression>
-                         <unary_op> <expression>
-                         <expression> <unary_op>
-                         <literal>
-                         <ident>
-
-    |     predicated ::= if | while | catch | switch
-    | non_predicated ::= do | try | finally | var | const | else | throw | return | case
 
   I realize that we don't currently differentiate between statements and expressions, so the block {foo(); return 4} is indistinguishable from an object literal. This is perhaps unfortunate
   from a code analysis perspective, but to try to distinguish between these cases is overkill for what I'm doing.
@@ -421,10 +403,7 @@ Lexing.
   The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
   logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression).
 
-Parsing.
-  There are some 
-
-  parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, absorb = 0, escaped = false, elements = [syntax()], c = function (i) {return s.charAt (i)};
+  parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, escaped = false, es = [syntax()], openers = [], c = function (i) {return s.charAt (i)};
                         while (i < l && ($_ = c(i))) {
           escaped = !! (token = '');
                if                                (/\s/.test ($_))                                                      ++i;
@@ -438,19 +417,19 @@ Parsing.
           else if                                       (ops[$_]) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
           else                                                    while                           (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
 
-          if (! token || --absorb >= 0) continue;
+          if (! token) continue;
 
-               if ('(['.indexOf (token) > -1 && last(elements).is_value ()) elements[elements.length - 1] = last(elements).verb (token);
-          else if                                            (opens[token]) elements.push (syntax(last(elements), token));
-          else if                                             (pair[token]) elements[elements.length - 1] = elements[elements.length - 1].value (elements.pop ());
-          else if (non_predicated[token] || predicated[token] || expect_re) elements[elements.length - 1] = last(elements).verb (token);
-          else                                                              elements[elements.length - 1] = last(elements).value (token);
+               if               ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
+          else if                                                    (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 ? token : null)), openers.push (token);
+          else if                    (pair[token] && pair[token] === last(openers)) es[es.length - 2] = es[es.length - 2].value (es.pop().top()), openers.pop ();
+          else if (non_predicated[token] || predicated[token] || precedence[token]) es[es.length - 1] = last(es).verb  (token);
+          else                                                                      es[es.length - 1] = last(es).value (token);
                         }
-                        return elements.pop().shake().toString (0)};
+                        return es.pop().top().shake().toString (0)};
 
   return parse;
 }) ({});
-__lY7MNoRS1pQFNGgXN4UN2/hfFJ8tQDJwkASeZXD/wDE
+__J5i+F3n84EC5duca0nd6PxBZDC09/G5Gfp+kfYeE668
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
