@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__J5i+F3n84EC5duca0nd6PxBZDC09/G5Gfp+kfYeE668');
+meta::code('main', <<'__6R5YzgLSvbVYISK5jZ6L+eBoZyuCckwozTY2ejBJNPE');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -357,39 +357,40 @@ var d = (function (cache) {
 
      precedence = {'[!':1, '.':1, '(!':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7, '>':7, '<=':7,
                    '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15, '%=':15,
-                   '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18, '{':19, '[':19, '(':19},
+                   '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18},
      predicated = set(qw('if while catch function switch')),
  non_predicated = set(qw('do try finally var const else break continue throw return case ++ -- ~ ! new typeof')),
-          right = set(qw('? : = += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
+          right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
         unaries = set(qw('++ -- u+ u- ! ~ new typeof')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
           opens = set(qw('( [ { ?')),
-           pair = {'(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{', '?':':'},
+           pair = {'(':')', '[':']', '{':'}', '?':':'},
             ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
- literal_binary = set(qw('= ; ,')),
+ literal_binary = set(qw('= ; , .')),
          macros = {'{': function (xs) {return '{' + xs.toString (20) + '}'}, '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], 20) + ':' + s(xs[2], n)}},
 
-          arity = function        (op) {return op === null ? 1 : unaries[op] || non_predicated[op] ? 1 : op === '?' ? 3 : 2},
+           prec = function        (op) {return precedence[op] || 20},
+          arity = function        (op) {return op === null || unaries[op] || non_predicated[op] ? 1 : op === '?' ? 3 : 2},
          syntax = function (p, op, xs) {xs || (xs = []);
                     return {xs: xs, op: op,
-                            value: function (x) {return xs.push (x), x.parent_to && x.parent_to (this), this},
+                            value: function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this), this)},
                         parent_to: function (x) {return p = x, this},
                          is_value: function  () {return xs.length >= arity(op)},
-                             verb: function (x) {return op ? precedence[x] >= precedence[op] + !! right[x] ?
-                                                               (p || (p = syntax()).value (this)).verb(x) : xs.push ($ = syntax (this, null, [xs.pop ()]).verb (x)) && $ : (op = x) && this},
+                             verb: function (x) {return op ? prec(x) >= prec(op) + !! right[x] ?
+                                                               (p || syntax().value (this)).verb(x) : xs.push ($ = syntax (this, x, [xs.pop ()])) && $ : (op = x) && this},
                          sandwich: function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
                             shake: function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]) :
                                                                          xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op, [xs[0], xs[1].xs[0]]) : this : this},
                               top: function  () {return p || this},
                          toString: function (n) {return ! op && ! xs.length ? '' :
-                                                                       ! op ? s(xs[0], n) :
+                                                                       ! op ? xs.join(',') :
                                                                  macros[op] ? macros[op].call (this, xs, n) :
-                                                         precedence[op] > n ? '(' + this.toString(precedence[op]) + ')' :
+                                                               prec(op) > n ? '(' + this.toString(prec(op)) + ')' :
                                                              predicated[op] ? op + '(' + s(xs[0], 20) + ')' + s(xs[1], 20) :
-                                                         non_predicated[op] ? op + ' ' + s(xs[0], precedence[op] || n) :
-                                                         literal_binary[op] ? s(xs[0], precedence[op] || n) + op + s(xs[1], precedence[op] || n) :
-                                                                              s(xs[0], precedence[op] || n) + '["' + op + '"](' + s(xs[1], 20) + ')'}}},
+                                                         non_predicated[op] ? op + ' ' + s(xs[0], prec(op)) :
+                                                         literal_binary[op] ? s(xs[0], prec(op)) + op + s(xs[1], prec(op)) :
+                                                                              s(xs[0], prec(op)) + '["' + op + '"](' + s(xs[1], 20) + ')'}}},
 
 JavaScript parsing.
   I'm using an inlined recursive-descent parser with flattened states and a streaming lexer to parse the source code. This is basically the same thing as a regular recursive-descent parser
@@ -420,23 +421,24 @@ Lexing.
           if (! token) continue;
 
                if               ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
-          else if                                                    (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 ? token : null)), openers.push (token);
-          else if                    (pair[token] && pair[token] === last(openers)) es[es.length - 2] = es[es.length - 2].value (es.pop().top()), openers.pop ();
+          else if                                                    (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 && token)),         openers.push (token);
+          else if                  (token === ':' && token === pair[last(openers)]) $ = es.pop().top().xs[0], last(es).verb (openers.pop ()).value ($);
+          else if                                   (token === pair[last(openers)]) es[es.length - 2] = es[es.length - 2].value (es.pop().top()),        openers.pop ();
           else if (non_predicated[token] || predicated[token] || precedence[token]) es[es.length - 1] = last(es).verb  (token);
           else                                                                      es[es.length - 1] = last(es).value (token);
                         }
-                        return es.pop().top().shake().toString (0)};
+                        return es.pop().top().shake().toString (20)};
 
   return parse;
 }) ({});
-__J5i+F3n84EC5duca0nd6PxBZDC09/G5Gfp+kfYeE668
+__6R5YzgLSvbVYISK5jZ6L+eBoZyuCckwozTY2ejBJNPE
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__4n268T6HubSjfxCoaTvvw6DbU1Vo68GXruVVZ1/f6Ls');
+meta::code('test', <<'__TU4SMn/RXbSniSL+9OMZvajL1mYcPSPwVLa501r3k7k');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -454,7 +456,7 @@ Licensed under the terms of the MIT source code license
   test ('foo + bar * bif');
   test ('foo * bar + bif');
 
-//  test ('x + function () {return y + 5}');
+  test ('x + function () {return y + 5}');
 
   test ('foo ? bar : bif');
   test ('foo ? bar ? bif : baz : bok');
@@ -492,7 +494,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__4n268T6HubSjfxCoaTvvw6DbU1Vo68GXruVVZ1/f6Ls
+__TU4SMn/RXbSniSL+9OMZvajL1mYcPSPwVLa501r3k7k
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
