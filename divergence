@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__uL/boP1G7mkxsSQFxEqOcENLCh+78qbk2H0LLX0xPT8');
+meta::code('main', <<'__zdSh7EEpcG0QIdlCDctoezog4+hgIWdR5aeNRqAPNvw');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -242,8 +242,9 @@ Language.
   Things Divergence doesn't support:
 
     | 1. 'Standard form' function definitions. Functions need to be declared as vars rather than as 'function foo () {...}'.
-    | 2. Post-increment and decrement. These are converted to pre-increment/decrement.
+    | 2. Post-increment and decrement. These totally hose the parser.
     | 3. Some edge cases regarding /new/ and /typeof/. The JavaScript grammar is squirrelly about these cases, and I haven't yet figured out why.
+    | 4. Lines not terminated by semicolons. These will work on SpiderMonkey-based browsers, but not Google Chrome for instance.
 
   It will probably support these at some point in the future.
 
@@ -276,7 +277,7 @@ Divergence standard library.
   themselves. Arrays call each of their parameters as a function when called, so this distributive law holds:
 
     | [f, g] (5)                    // [f(5), g(5)]
-    | [f, g] >>- ($_ (5))
+    | [f, g] >>- (x >$> x (5))
 
   Note that the invocation operator () is translated into the /call/ method, so any data type can overload it.
 
@@ -332,13 +333,7 @@ Macros.
   Sometimes you want to write an operator or function that has the ability to rewrite code. Fortunately, this is quite a straightforward process. The >$> macro is one such construct, and it is
   defined like this:
 
-    | d.infix ('>$>', function (xs) {return '(function(' + xs[0].toString(20) + '){return ' + xs[1].toString(20) + '})'});
-
-  Prefix macros can also be defined. They resemble normal function calls and look like this:
-
-    | d.prefix ('foo', function (x, y, z) {return x + ' + ' + y + ' * ' + z});
-
-  That macro would transform any occurrences of the expression foo(3 + 5, x, y + 1) into the code (3 + 5) + x * (y + 1).
+    | d.infix ('>$>', function (xs) {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'});
 
   There are a couple of reasons I decided to go with this somewhat weak macro model. The first is that this code is likely to be compiled each time the JavaScript is loaded (though you can
   always call toString() on the resulting function to grab its source and save it for later), so it's important to minimize the overhead of processing it; the second is that an overuse of
@@ -350,56 +345,69 @@ var d = (function (cache) {
   var        qw = function    (s) {return s.split (' ')},
             set = function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
            last = function   (xs) {return xs[xs.length - 1]},
-              s = function (s, n) {return s === undefined || s === null ? '' : s.toString (n)},
+              s = function (s, n) {return s === undefined || s === null ? '' : s.to_string ? s.to_string (n) : s.toString ()},
               $ = null,
 
-     precedence = {'function':1, '[!':1, '.':1, '(!':1, 'new':2, '++':3, '--':3, 'typeof':3, '~':3, '!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7,
+     precedence = {'function':1, '[!':1, '.':1, '(!':1, 'new':2, 'u++':3, 'u--':3, 'typeof':3, 'u~':3, 'u!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7,
                    '>':7, '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15,
                    '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, ';':18},
      predicated = set(qw('if while catch function switch')),
- non_predicated = set(qw('do try finally var const else break continue throw return case ++ -- ~ ! new typeof')),
-          right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= ~ ! new typeof u+ u- ++ --')),
+ non_predicated = set(qw('do try finally var const else break continue throw return case u++ u-- u~ u! new typeof')),
+          right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! new typeof u+ u- u++ u--')),
         unaries = set(qw('++ -- u+ u- ! ~ new typeof')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
+         grafts = set(qw('u+ u-')),
           opens = set(qw('( [ { ?')),
            pair = {'(':')', '[':']', '{':'}', '?':':'},
             ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
- literal_binary = set(qw('= ; , . :')),
-         macros = {  '{': function (xs) {return '{' + xs.toString (20) + '}'}, '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], 20) + ':' + s(xs[2], n)},
-                   '>$>': function (xs) {return '(function(' + xs[0].toString (20) + '){return ' + xs[1].toString (20) + '})'}},
+ lvalue_assigns = set(qw('+= -= *= /= %= ^= &= |= <<= >>= >>>=')),
+ literal_binary = set(qw('= ; , . : === !==')),
+  literal_unary = set(qw('u++ u-- u!')),
+   translations = {'u+':'+', 'u-':'-', 'u~':'~', 'u!':'!', 'u--':'--', 'u++':'++'},
+            max = 20,
+         macros = (function ($) {for (var k in lvalue_assigns) $[k] = (function (k) {return function (xs) {
+                                   return '(' + s(xs[0], prec('=')) + ' = ' + s(syntax(null, k.substr (0, k.length - 1), xs), prec('=')) + ')'}}) (k);
+                                 return $}) ({  '{': function (xs) {return '{' + s(xs[0], max) + '}'}, '[': function (xs) {return '[' + s(xs[0], max) + ']'},
+                                                '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], max) + ':' + s(xs[2], n)},
+                                              '>$>': function (xs) {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'}}),
 
-           prec = function        (op) {return precedence[op] || 20},
-          arity = function        (op) {return ! op || unaries[op] || non_predicated[op] || '[{'.indexOf(op) > -1 ? 1 : op === '?' ? 3 : 2},
+           prec = function (op) {return precedence[op] || max},
+          arity = function (op) {return ! op || unaries[op] || non_predicated[op] || '[{'.indexOf(op) > -1 ? 1 : op === '?' ? 3 : 2},
+           disp = function (op) {return translations[op] || op},
+
+Incremental parsing.
+  Operator-precedence parsing is done with incremental tree rewrites. Each tree node knows its intended arity (luckily this is fixed for each operator) and its precedence, and it accepts new
+  values and 'verbs', or operators. [1]  When a new value is encountered, it is added to the bottom-most tree with room for it.
+
+  | [1]. Not all verbs are operators per se. The choice of wording arose because we also have statement-related verbs such as /for/, /if/, /function/, etc.
+
          syntax = function (p, op, xs) {xs || (xs = []);
                     return {   xs: xs,
                                op: function  () {return op},
-                            value: function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this), this)},
-                             verb: function (x) {return op ? prec(x) >= prec(op) + !! right[x] ?
+                            value: function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this) || this)},
+                           values: function ($) {var o = this; for (var i = 0, l = $.length; i < l; ++i) o = o.value ($[i]); return o},
+                             verb: function (x) {return op ? prec(x) >= prec(op) + !! (right[x] || non_predicated[x]) ?
                                                                         (p || syntax().value (this)).verb(x) : xs.push ($ = syntax (this, x, [xs.pop ()])) && $ : (op = x) && this},
                         parent_to: function (x) {return p = x, this},
                          is_value: function  () {return xs.length >= arity(op)},
                          sandwich: function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
-                            shake: function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]).shake() :
+                      unary_shake: function  () {return xs[1] && xs[1].op && grafts[xs[1].op] && xs[1].xs.length === 1 ? syntax(p, op + xs[1].op, [xs[0], xs[1].xs[0]]) : this},
+                     binary_shake: function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]).shake() :
                                                                          xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op(), [xs[0], xs[1].xs[0]]).shake() :
                                                                          syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]]) : this},
+                            shake: function  () {return this.binary_shake().unary_shake()},
                               top: function  () {return p || this},
-                         toString: function (n) {return ! op && ! xs.length ? '' :
+                          inspect: function  () {return '("' + op + '" ' + xs.map (function (x) {return x && x.inspect ? x.inspect() : x}).join (' ') + ')'},
+                         toString: function (n) {return this.to_string (n)},
+                        to_string: function (n) {return ! op && ! xs.length ? '' :
                                                                        ! op ? xs.join(',') :
                                                                  macros[op] ? macros[op].call (this, xs, n) :
-                                                               prec(op) > n ? '(' + this.toString(prec(op)) + ')' :
-                                                             predicated[op] ? op + '(' + s(xs[0], 20) + ')' + s(xs[1], 20) :
-                                                         non_predicated[op] ? op + ' ' + s(xs[0], prec(op)) :
-                                                         literal_binary[op] ? s(xs[0], prec(op)) + op + s(xs[1], prec(op)) :
-                                                                              s(xs[0], prec(op)) + '["' + op + '"](' + s(xs[1], 20) + ')'}}},
-
-JavaScript parsing.
-  I'm using an inlined recursive-descent parser with flattened states and a streaming lexer to parse the source code. This is basically the same thing as a regular recursive-descent parser
-  that delegates to a shunting yard algorithm for arithmetic parsing, except that it takes a bunch of shortcuts derived from the knowledge that the input is already well-formed. Well-formed
-  input means that we can actually parse a much more general language than JavaScript, and this results in a more compact parser.
-
-  I realize that we don't currently differentiate between statements and expressions, so the block {foo(); return 4} is indistinguishable from an object literal. This is perhaps unfortunate
-  from a code analysis perspective, but to try to distinguish between these cases is overkill for what I'm doing.
+                                                               prec(op) > n ? '(' + this.to_string(prec(op)) + ')' :
+                                                             predicated[op] ? disp(op) + '(' + s(xs[0], max) + ')' + s(xs[1], max) :
+                                                         non_predicated[op] ? disp(op) + ' ' + s(xs[0], prec(op)) :
+                                                         literal_binary[op] ? s(xs[0], prec(op)) + disp(op) + s(xs[1], prec(op)) :
+                                                                              s(xs[0], prec(op)) + '["' + disp(op) + '"](' + s(xs[1], max) + ')'}}},
 
 Lexing.
   The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
@@ -409,7 +417,7 @@ Lexing.
                         while (i < l && ($_ = c(i))) {
           escaped = !! (token = '');
                if                                (/\s/.test ($_))                                                      ++i;
-          else if                    ('([{}])'.indexOf ($_) > -1)                                                      expect_re =  ! (token = $_), ++i;
+          else if                  ('([{?:}])'.indexOf ($_) > -1)                                                      expect_re = ('([{?:'.indexOf (token = $_) > -1), ++i;
           else if                ($_ === '/' && c(i + 1) === '*') while (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
           else if                ($_ === '/' && c(i + 1) === '/') while            (c(++i) !== '\n' && c(i) !== '\r');
           else if ($_ === '/' &&    expect_re &&  (token = '/'))  while   (($_ = c(++i)) !== '/' || escaped || ! ++i)  expect_re =  ! (token += c(i)), escaped = ! escaped && $_ === '\\';
@@ -423,23 +431,23 @@ Lexing.
 
                if               ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
           else if                                                    (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 && token)),         openers.push (token);
-          else if                  (token === ':' && token === pair[last(openers)]) $ = es.pop().top().xs[0], last(es).verb (openers.pop ()).value ($);
-          else if                                   (token === pair[last(openers)]) es[es.length - 2] = es[es.length - 2].value (es.pop().top()),        openers.pop ();
+          else if                          (token === ':' && last(openers) === '?') $ = es.pop().top(), es[es.length - 1] = last(es).value ($);
+          else if                                   (token === pair[last(openers)]) es[es.length - 2] = es[es.length - 2].value (es.pop().top()), openers.pop ();
           else if (non_predicated[token] || predicated[token] || precedence[token]) es[es.length - 1] = last(es).verb  (token);
           else                                                                      es[es.length - 1] = last(es).value (token);
                         }
-                        return es.pop().top().shake().toString (20)};
+                        return es.pop().top().shake().inspect()};
 
   return parse;
 }) ({});
-__uL/boP1G7mkxsSQFxEqOcENLCh+78qbk2H0LLX0xPT8
+__zdSh7EEpcG0QIdlCDctoezog4+hgIWdR5aeNRqAPNvw
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__6yunr6OxgDRKMQYrMe2K0bjDadDsICfJ9ZlQwNjnSLI');
+meta::code('test', <<'__RnKxlq+fuU9BWBBUi6s0+GBbc6Nv5QrN6nyoJ+f5Ais');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -457,13 +465,25 @@ Licensed under the terms of the MIT source code license
   test ('foo + bar * bif');
   test ('foo * bar + bif');
 
+  test ('100 += 200 * 300');
+  test ('foo += bar * bif');
+  test ('foo + ++bif - --bar + --baz');
+
   test ('x >$> (x + 1)');
   test ('x >$>$> (x + 1)');
 
-  test ('x + function () {return y + 5}');
+  test ('[1, 2, 3] * (x >$> x + 1)');
+  test ('[1, 2, 3] * x >$> x + 1');
 
-  test ('foo ? bar : bif');
+  test ('x + (() >$> y + 5)');
+  test ('x + ((y, z) >$> y + 5)');
+
+  test ('x +$>>- y');
+
+  test ('foo ? bar + bok : bif');
   test ('foo ? bar ? bif : baz : bok');
+
+  test ('if (x == y) return function (x) {return x + 1};');
 
   test ('var x = 5');
   test ('var x = 5, y = 6');
@@ -500,7 +520,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__6yunr6OxgDRKMQYrMe2K0bjDadDsICfJ9ZlQwNjnSLI
+__RnKxlq+fuU9BWBBUi6s0+GBbc6Nv5QrN6nyoJ+f5Ais
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
