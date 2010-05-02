@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__EEJfOy6ZkAn1JnxpCYdhornJ6yib6WxxjM+mCTG+Q4Q');
+meta::code('main', <<'__7dLvzFtLo4At+uBn27L3fH04xKH04LpYSt7WAhvBFQo');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -354,13 +354,13 @@ Incremental parsing.
                             value: function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this) || this)},
                            values: function ($) {var o = this; for (var i = 0, l = $.length; i < l; ++i) $[i] && (o = o.value ($[i])); return o},
                              verb: function (x) {return op ? prec(x) >= prec(op) + !! right[x] ?
-                                                                        (p || syntax().value (this)).verb(x) : xs.push ($ = syntax (this, x, [xs.pop ()])) && $ : (op = x) && this},
+                                                                        (p || syntax().value (this)).verb(x) : xs.push ($ = syntax (this, x).value (xs.pop ())) && $ : (op = x) && this},
                         parent_to: function (x) {return p = x, this},
                          is_value: function  () {return xs.length >= arity(op)},
                          sandwich: function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
                             shake: function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]]).shake() :
                                                                          xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op(), [xs[0], xs[1].xs[0]]).shake() :
-                                                                         syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]]) : this},
+                                                                         syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]].concat (xs.slice(2))) : this},
                               top: function  () {return p || this},
                           inspect: function  () {return '("' + op + '" ' + xs.map (function (x) {return x && x.inspect ? x.inspect() : x}).join (' ') + ')'},
                          toString: function (n) {return this.to_string (n)},
@@ -406,14 +406,14 @@ Lexing.
 
   return d;
 }) ({});
-__EEJfOy6ZkAn1JnxpCYdhornJ6yib6WxxjM+mCTG+Q4Q
+__7dLvzFtLo4At+uBn27L3fH04xKH04LpYSt7WAhvBFQo
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__mPlsR7vl4YlL/v7MP0bRveevXWU/n4GVeCLj+lmCY1g');
+meta::code('test', <<'__1XfPOzcfz7Y3DhCdrtppe34NfQCYgaqpIf3SLT3FvGA');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -424,7 +424,7 @@ Licensed under the terms of the MIT source code license
 
   var trace        = function (x) {print (x); return x};
 
-  var test         = function (s) {print (s + '  =>  ' + d (s).to_string (20))};
+  var test         = function (s) {print (s + '  =>  ' + d (s).shake ().to_string (20))};
 
   test ('foo.bar.bif.baz');
   test ('foo . bar . bif . baz');
@@ -477,7 +477,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__mPlsR7vl4YlL/v7MP0bRveevXWU/n4GVeCLj+lmCY1g
+__1XfPOzcfz7Y3DhCdrtppe34NfQCYgaqpIf3SLT3FvGA
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
