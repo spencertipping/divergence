@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__sBrXM+SXm4220aXlzgncyFTXNWLfqWCvfNopK5J7xFY');
+meta::code('main', <<'__SZoNKnGlCnNpU3q7zpV1mER0Z49ENEPedJaKgTI/x5c');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -312,7 +312,7 @@ Macros.
   Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds but operators don't.
 
 var d = (function (cache) {
-  var         d =       function     () {return d.parse.apply (this, arguments)},
+  var         d =       function     () {return d.eval.apply (this, arguments)},
              qw =       function    (s) {return s.split (' ')},
             set =       function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
            last =       function   (xs) {return xs[xs.length - 1]},
@@ -323,7 +323,7 @@ var d = (function (cache) {
                    '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15,
                    '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17},
           right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! new typeof u+ u- u++ u--')),
-        unaries = set(qw('++ -- u+ u- ! ~ new typeof')),
+        unaries = set(qw('u++ u-- u+ u- u! u~ new typeof')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
           opens = set(qw('( [ { ?')),
@@ -336,9 +336,9 @@ var d = (function (cache) {
             max = 20,
          macros = (function ($) {for (var k in lvalue_assigns) $[k] = (function (k) {return function (xs) {
                                    return '(' + s(xs[0], prec('=')) + ' = ' + s(syntax(null, k.substr (0, k.length - 1), xs), prec('=')) + ')'}}) (k);
-                                 return $}) ({  '{': function (xs) {return '{' + s(xs[0], max) + '}'}, '[': function (xs) {return '[' + s(xs[0], max) + ']'},
+                                 return $}) ({  '{': function (xs)    {return '{' + s(xs[0], max) + '}'}, '[': function (xs) {return '[' + s(xs[0], max) + ']'},
                                                 '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], max) + ':' + s(xs[2], n)},
-                                              '>$>': function (xs) {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'}}),
+                                              '>$>': function (xs)    {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'}}),
 
            prec = function (op) {return precedence[op] || max},
           arity = function (op) {return ! op || unaries[op] || '[{'.indexOf(op) > -1 ? 1 : op === '?' ? 3 : 2},
@@ -354,7 +354,9 @@ Incremental parsing.
           value:  function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this) || this)},
          values:  function ($) {var o = this; for (var i = 0, l = $.length; i < l; ++i) $[i] && (o = o.value ($[i])); return o},
            verb:  function (x) {return op ? prec(x) >= prec(op) + !! right[x] ?
-                                                       (p || syntax().value (this)).verb(x) : xs.push ($ = syntax (this, x).value (xs.pop ())) && $ : (op = x) && this},
+                                                       (p || syntax().verb(x).value (this)) : arity(x) >= arity(op) ? xs.push ($ = syntax (this).value (xs.pop ()).verb (x)) && $ :
+                                                                                                                      xs.push ($ = syntax (this).verb (x))                   && $ :
+                                                       (op = x) && this},
       parent_to:  function (x) {return p = x, this},
        is_value:  function  () {return xs.length >= arity(op)},
        sandwich:  function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
@@ -391,34 +393,33 @@ Lexing.
 
           if (! token) continue;
 
-               if ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
-          else if                                      (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 && token)),         openers.push (token);
+               if ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()),          openers.push (token);
+          else if                                      (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 && token).value (syntax())), openers.push (token);
           else if            (token === ':' && last(openers) === '?') $ = es.pop().top().xs, es[es.length - 1] = last(es).verb (openers.pop ()).values ($);
-          else if                     (token === pair[last(openers)]) es[es.length - 2] = es[es.length - 2].value (es.pop().top()), openers.pop ();
+          else if                     (token === pair[last(openers)]) $ = es.pop().top(),    es[es.length - 1] = last(es).value ($), openers.pop ();
           else if                                 (precedence[token]) es[es.length - 1] = last(es).verb  (token);
           else                                                        es[es.length - 1] = last(es).value (token);
                         }
                         return es.pop().top()};
 
-  d.sandwich = function     () {for (var i = 0, l = arguments.length; i < l; ++i) sandwiches[arguments[i]] = true; return d};
-  d.infix    = function (s, f) {macros[s] = f; return d};
-  d.eval     = function    (x) {return eval (d.parse (x).to_string (0))};
-  d.extend   = function (o, $) {for (var k in $) $.hasOwnProperty (k) && (o[k] = $[k]); return o};
-
-  d.prototypes = {Number: {zero: 0, '+': function (y) {return this + y}, '-': function (y) {return this - y}}};
+  d.extend = function (o, $) {for (var k in $) $.hasOwnProperty (k) && (o[k] = $[k]); return o};
+  d.extend (d, {sandwich: function     () {for (var i = 0, l = arguments.length; i < l; ++i) sandwiches[arguments[i]] = true; return d},
+                   infix: function (s, f) {macros[s] = f; return d},
+                    eval: function    (x) {return eval (d.parse (x).to_string (0))},
+              prototypes: {Number: {zero: 0, '+': function (y) {return this + y}, '-': function (y) {return this - y}}}});
 
   for (var k in d.prototypes) d.extend (d.prototypes[k].zero.constructor.prototype, d.prototypes[k]);
 
   return d;
 }) ({});
-__sBrXM+SXm4220aXlzgncyFTXNWLfqWCvfNopK5J7xFY
+__SZoNKnGlCnNpU3q7zpV1mER0Z49ENEPedJaKgTI/x5c
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__7PIi2hTGuMgbP/xAKtslsZLKTgx9wk3GjxFoUvASyTU');
+meta::code('test', <<'__DRRl0xjlK/18KYBieCgDl2i8l8XQ+oeXWmB/q/cITEo');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -429,7 +430,7 @@ Licensed under the terms of the MIT source code license
 
   var trace        = function (x) {print (x); return x};
 
-  var test         = function (s) {print (s + '  =>  ' + d.parse (s).shake ().to_string (20))};
+  var test         = function (s) {print (s + '  =>  ' + d.parse (s).shake ().inspect (20))};
 
   test ('foo.bar.bif.baz');
   test ('foo . bar . bif . baz');
@@ -438,7 +439,7 @@ Licensed under the terms of the MIT source code license
 
   test ('100 += 200 * 300');
   test ('foo += bar * bif');
-  test ('foo + ++bif - --bar + --baz');
+  test ('foo + -5');
 
   test ('x >$> (x + 1)');
   test ('x >$>$> (x + 1)');
@@ -482,7 +483,7 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__7PIi2hTGuMgbP/xAKtslsZLKTgx9wk3GjxFoUvASyTU
+__DRRl0xjlK/18KYBieCgDl2i8l8XQ+oeXWmB/q/cITEo
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
