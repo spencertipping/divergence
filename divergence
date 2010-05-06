@@ -228,7 +228,7 @@ JSON encoding and decoding.
                     'undefined': k ('null')});
 __gyBFhEfbP7alsYGb131DnVDnIdT6XSViKCLOpJ9988E
 
-meta::code('main', <<'__WsFAse5QIKJ8IVXFO8LE9gN2zyZVVwA48rvXG5w+iJo');
+meta::code('main', <<'__vT9gkA56UvUDnksLV8zX0Eb2Tzhwo7gRXBONRW+EGkw');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -257,7 +257,7 @@ var d = (function () {
          fn: function  () {return this.exec.bind (this)}});
 
   init (Function.prototype, {
-    call_cc: function (c) {var cs = [[this, c = c.fn()]], cc = null; while (cs[0][0] !== c) cc = cs.pop(), cs.push (cc[0].apply (this, cc.slice(1))); return c.apply (this, cs.pop().slice(1))},
+    call_cc: function (c) {var cc = [this, c = c.fn()]; while (cc[0] !== c) cc = cc[0].apply (this, cc.slice(1)); return c.apply (this, cc.slice(1))},
        tail: function  () {return [this].concat (arr (arguments))},
        type: function  () {var f = function () {}, c = this; init.apply (this, [f.prototype].concat (arr (arguments))); return function () {var x = new f (); return c.apply (x, arguments)}},
        bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
@@ -288,14 +288,14 @@ var d = (function () {
                                  (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
 
   return d}) ();
-__WsFAse5QIKJ8IVXFO8LE9gN2zyZVVwA48rvXG5w+iJo
+__vT9gkA56UvUDnksLV8zX0Eb2Tzhwo7gRXBONRW+EGkw
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__I7HoQbxbgHL9XD7FZw9n5GreZ+T5jCmPx11uIcSjRzA');
+meta::code('test', <<'__1qil2EWGz7lsrJxSh5xQdmOE1lMowI6H6ZHbWk+JZQ8');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -315,9 +315,21 @@ Function tests.
 
   assert_equal ((function (cc) {return cc.tail (5)}).call_cc ('$0'), 5, 'Function.call_cc');
 
-  var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();
+  var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();         // factorial_cps (n, accumulator, continuation)
   assert_equal (factorial_cps.fn (5, 1).call_cc ('$0'), 120, 'Function.call_cc 2');
-__I7HoQbxbgHL9XD7FZw9n5GreZ+T5jCmPx11uIcSjRzA
+
+  var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
+  assert_equal (sum.fn (10000, 0).call_cc ('$0'), (10000 * 10001) >> 1, 'Function.call_cc 3');          // Runs in constant stack space
+
+Re-entrant continuations.
+You can implement re-entrant continuations in JavaScript as long as you make all call/cc invocations tail calls. (This is normal CPS anyway.) Here's how you use it (naturally, normal caveats
+about code readability apply even though this isn't Scheme):
+
+  var factorial_cps_2 = '$0 > 1 ? factorial_cps_2.tail ($0 - 1, $0 * $1, $2) : $2.tail ($2)'.fn ();     // Returns its continuation
+  factorial_cps_2.count = 0;
+  assert_equal (factorial_cps_2.fn (5, 1).call_cc ('$0.cc = $1, ++$0.count'.fn (factorial_cps_2)), 1, 'Function.call_cc re-entrant 1');
+  assert_equal (factorial_cps_2.cc.call_cc ('$0'), 2, 'Function.call_cc re-entrant 2');                 // Have to use call/cc to get back into a continuation
+__1qil2EWGz7lsrJxSh5xQdmOE1lMowI6H6ZHbWk+JZQ8
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
