@@ -228,7 +228,7 @@ JSON encoding and decoding.
                     'undefined': k ('null')});
 __gyBFhEfbP7alsYGb131DnVDnIdT6XSViKCLOpJ9988E
 
-meta::code('main', <<'__H+oFLT7GbBEV1MKbEyJSbl4QPHwfeSR9xIbOUx5G4ZI');
+meta::code('main', <<'__byepql7YQ6N9Zy54/vDdEKs1N7iA+m40Xm9/W0/hwSw');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -277,21 +277,23 @@ var d = (function () {
 
   (d.macro  = tr.push.bind (tr)) (/\$(\d+)/g.maps_to ('"arguments[" + arguments[1] + "]"'.fn()),
                                        /@_/g.maps_to ('Array.prototype.slice.call(arguments)'),
-                                      /\$_/g.maps_to ('this'));
+                                      /\$_/g.maps_to ('this'),
+                                      /sub/g.maps_to ('function()'),
+                                        /{/g.maps_to ('{return '));
 
   keys (fns).each ('$1.alias($0[$1])'.fn (fns));
   keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
                                  (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
 
   return d}) ();
-__H+oFLT7GbBEV1MKbEyJSbl4QPHwfeSR9xIbOUx5G4ZI
+__byepql7YQ6N9Zy54/vDdEKs1N7iA+m40Xm9/W0/hwSw
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__P11dGSKYGTEbAp14AYGh7mqBD2NBUywWftfh9kEK1ZI');
+meta::code('test', <<'__jC5qivJA6veRLzRbHL63hQ8DcrJEgHFFnZo6qEIlKWg');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -305,7 +307,8 @@ String tests.
   assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
   assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}) (6), 5, 'String.invoke');
   assert_equal ('$_'.expand (), 'this', 'String.expand');
-__P11dGSKYGTEbAp14AYGh7mqBD2NBUywWftfh9kEK1ZI
+  assert_equal ('$_ + sub {$_ + 1}'.expand (), 'this + function() {return this + 1}', 'String.expand 2');
+__jC5qivJA6veRLzRbHL63hQ8DcrJEgHFFnZo6qEIlKWg
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
