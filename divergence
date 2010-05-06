@@ -228,7 +228,7 @@ JSON encoding and decoding.
                     'undefined': k ('null')});
 __gyBFhEfbP7alsYGb131DnVDnIdT6XSViKCLOpJ9988E
 
-meta::code('main', <<'__ePLwiUck64Pqmq3UjB9sKSzRvxhg1AmkVOzMW5LcK/8');
+meta::code('main', <<'__H+oFLT7GbBEV1MKbEyJSbl4QPHwfeSR9xIbOUx5G4ZI');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -236,7 +236,7 @@ var d = (function () {
   var   tr = [],                                                       ps = [Function, String, Number, Boolean, RegExp, Array],
          a = function  (x) {return x},                                  k = function (x) {return function () {return x}},
        arr = function (xs) {return Array.prototype.slice.call (xs)},   k$ = k (a),
-         d = function   () {return d.define.apply (d, arguments)},    fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
+         d = function   () {return d.macro.apply (d, arguments)},     fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
 
       keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
@@ -250,7 +250,6 @@ var d = (function () {
      invoke: function  () {return '$2[$0].bind($2).fn.apply($2[$0], $1)'.fn (this.toString (), arguments)},
      expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
       alias: function (v) {return d[this] = v.fn()},
-       pick: function  () {var xs = this.split (/\s+/); return function (x) {return [x].concat (xs).fold ('$0 && $0[$1]')}},
          fn: function  () {var f = d[this] || c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
 
   init (RegExp.prototype, {
@@ -285,14 +284,14 @@ var d = (function () {
                                  (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
 
   return d}) ();
-__ePLwiUck64Pqmq3UjB9sKSzRvxhg1AmkVOzMW5LcK/8
+__H+oFLT7GbBEV1MKbEyJSbl4QPHwfeSR9xIbOUx5G4ZI
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__cwEFSA9FawV9sJSe9ud/kpxy1wjiEAI/7rmzWRnPAJY');
+meta::code('test', <<'__P11dGSKYGTEbAp14AYGh7mqBD2NBUywWftfh9kEK1ZI');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -304,9 +303,9 @@ Licensed under the terms of the MIT source code license
 String tests.
 
   assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
-  assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}), 5, 'String.invoke');
+  assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}) (6), 5, 'String.invoke');
   assert_equal ('$_'.expand (), 'this', 'String.expand');
-__cwEFSA9FawV9sJSe9ud/kpxy1wjiEAI/7rmzWRnPAJY
+__P11dGSKYGTEbAp14AYGh7mqBD2NBUywWftfh9kEK1ZI
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
