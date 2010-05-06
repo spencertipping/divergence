@@ -842,9 +842,9 @@ meta::function('state', <<'__1S8nzRSMoxJU/VEv2rx/NrAt1iRgXQ9ugxjUP3IFunI');
 sha256_base64 serialize();
 __1S8nzRSMoxJU/VEv2rx/NrAt1iRgXQ9ugxjUP3IFunI
 
-meta::function('unlit', <<'__mHW0V1RkAGfY6knX3jpBVyo6OVIjN55Z5o1rIDrqxFU');
-join "\n//\n", map {m/^\s*[^0-9a-z_()\[\]{}!\/ ]/o ? s/^/\/\/ /omg : s/^(\s*)!/\1 /o; $_} split /\n\n+/, code(@_);
-__mHW0V1RkAGfY6knX3jpBVyo6OVIjN55Z5o1rIDrqxFU
+meta::function('unlit', <<'__4zPHXwlGFrTN0OAvy0k5UFlrLmXg6SUA8aJM9GyFDko');
+join "\n\n", map {m/^\s*[^0-9a-z_()\[\]{}!\/ ]/o ? s/^/\/\/ /omg : s/^(\s*)!/\1 /o; $_} split /\n\n+/, code(@_);
+__4zPHXwlGFrTN0OAvy0k5UFlrLmXg6SUA8aJM9GyFDko
 
 meta::function('unlock', <<'__08PohCY8fcNe+pWCO6ic6XOOKv48NkrxpNMmTOUIFdA');
 my (undef, undef, $mode) = stat $0;
