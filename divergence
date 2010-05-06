@@ -655,9 +655,10 @@ meta::function('ls', <<'__M3wGXSw8/xm3RiNq0uLWke1dHm2OWQbvJpHkngdPafg');
 join("\n", sort keys %externalized_functions);
 __M3wGXSw8/xm3RiNq0uLWke1dHm2OWQbvJpHkngdPafg
 
-meta::function('ls-a', <<'__3Ou+kVmaLIe1oZKBOufKY7pSsksgTSAfNeXRniPFZPk');
-join("\n", sort keys %data);
-__3Ou+kVmaLIe1oZKBOufKY7pSsksgTSAfNeXRniPFZPk
+meta::function('ls-a', <<'__ZF0mLdFoa0pys6NZ+Yz5lsmaE2GeJMG2Aw1C3j88moQ');
+my $criteria = join '|', @_;
+join("\n", grep(/$criteria/, sort keys %data));
+__ZF0mLdFoa0pys6NZ+Yz5lsmaE2GeJMG2Aw1C3j88moQ
 
 meta::function('mv', <<'__ijyNZ8r34FVK0Ki9/Q0Irx5k9U0pZ+/frrdlu+qkEP4');
 my ($from, $to) = @_;
