@@ -212,14 +212,14 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('lib', <<'__N08X1fHoVt+HwtGpcBfcZYeSi1yXIxZOw33fBMo3npU');
+meta::code('lib', <<'__11ZOxi63VgelwCsByyN6BLw/N3S8+YkcLoAPDVWvDpw');
 Divergence JavaScript Standard Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
-var   tr = [],                                                       ps = [Function, String, Number, Boolean, RegExp, Array],
-       a = function  (x) {return x},                                  k = function (x) {return function () {return x}},
-     arr = function (xs) {return Array.prototype.slice.call (xs)},   k$ = k (a),
-       d = function   () {return d.macro.apply (d, arguments)},     fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
+var   tr = [],                                                           ps = [Function, String, Number, Boolean, RegExp, Array],
+       a = function  (x) {return x},                                      k = function (x) {return function () {return x}},
+     arr = function (xs) {return Array.prototype.slice.call (xs)},       k$ = k (a),
+       d = function   () {return d[d['default']].apply (d, arguments)}, fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
 
     keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
     init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
@@ -240,8 +240,8 @@ init (RegExp.prototype, {
        fn: function  () {return this.exec.bind (this)}});
 
 init (Function.prototype, {
-  call_cc: function (c) {var cc = [this, c = c.fn()]; while (cc[0] !== c) cc = cc[0].apply (this, cc.slice(1)); return c.apply (this, cc.slice(1))},
-     tail: function  () {return [this].concat (arr (arguments))},
+  call_cc: function (c) {var cc = [this, [c = c.fn()]]; while (cc[0] !== c) cc = cc[0].apply (this, cc[1]); return c.apply (this, cc[1])},
+     tail: function  () {return [this, arguments]},
      type: function  () {var f = function () {}, c = this; init.apply (this, [f.prototype].concat (arr (arguments))); return function () {var x = new f (); return c.apply (x, arguments)}},
      bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
        fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
@@ -260,20 +260,19 @@ init (Array.prototype, {
 init (Boolean.prototype, {fn: function () {return this.valueOf () ? a : (1).fn ()}});
 init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
 
-(d.macro  = tr.push.bind (tr)) (/\$(\d+)/g.maps_to ('"arguments[" + arguments[1] + "]"'.fn()),
-                                     /@_/g.maps_to ('Array.prototype.slice.call(arguments)'),
-                                    /\$_/g.maps_to ('this'),
-                                    /sub/g.maps_to ('function()'),
-                                      /{/g.maps_to ('{return '));
+(d.macro = tr.push.bind (tr)) (/\$(\d+)/g.maps_to ('"arguments[" + arguments[1] + "]"'.fn()),
+                                    /@_/g.maps_to ('Array.prototype.slice.call(arguments)'),
+                                   /\$_/g.maps_to ('this'),
+                                   /sub/g.maps_to ('function()'),
+                                     /{/g.maps_to ('{return '));
 
 keys (fns).each ('$1.alias($0[$1])'.fn (fns));
 keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
                                (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
-__N08X1fHoVt+HwtGpcBfcZYeSi1yXIxZOw33fBMo3npU
+__11ZOxi63VgelwCsByyN6BLw/N3S8+YkcLoAPDVWvDpw
 
-meta::code('lib-tests', <<'__xBxpWfmBj651JIhHappiFJZ4jsLA4ttqLk14ktHXqL8');
+meta::code('lib-tests', <<'__v8vOnqBdjTvcaT6mymMCY9PXoWqZ2BCLI17+ozpM8pM');
 Standard library tests.
-
 
 String tests.
 
@@ -298,9 +297,11 @@ about code readability apply even though this isn't Scheme):
 
   var factorial_cps_2 = '$0 > 1 ? factorial_cps_2.tail ($0 - 1, $0 * $1, $2) : $2.tail ($2)'.fn ();     // Returns its continuation
   factorial_cps_2.count = 0;
-  assert_equal (factorial_cps_2.fn (5, 1).call_cc ('$0.cc = $1, ++$0.count'.fn (factorial_cps_2)), 1, 'Function.call_cc re-entrant 1');
-  assert_equal (factorial_cps_2.cc.call_cc ('$0'), 2, 'Function.call_cc re-entrant 2');                 // Have to use call/cc to get back into a continuation
-__xBxpWfmBj651JIhHappiFJZ4jsLA4ttqLk14ktHXqL8
+  assert_equal (factorial_cps_2.fn (5, 1).call_cc ('$0.cc || ($0.cc = $1), ++$0.count'.fn (factorial_cps_2)), 1, 'Function.call_cc re-entrant 1');
+  assert_equal (factorial_cps_2.cc (), 2, 'Function.call_cc re-entrant 2');
+  assert_equal (factorial_cps_2.cc (), 3, 'Function.call_cc re-entrant 3');
+  assert_equal (factorial_cps_2.cc (), 4, 'Function.call_cc re-entrant 3');
+__v8vOnqBdjTvcaT6mymMCY9PXoWqZ2BCLI17+ozpM8pM
 
 meta::code('main', <<'__62gNjpQAogAYea3mT6e6pTsOh3o22ulR62Mvyxnwg+0');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
@@ -574,7 +575,7 @@ This is for scratchwork that isn't part of your system. It could be used for tes
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__4RvPp3qreprY+dLsD2Y/c3bDJ1U9t6kH2nL2aZJIlfk');
+meta::code('test', <<'__2hbbpLa1mmG0NjaxMSkkFIHqLeUcDWN07coyZjqGYDw');
 Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -584,9 +585,7 @@ Licensed under the terms of the MIT source code license
 
 :: get lib-tests
 :: get parser-tests
-
-
-__4RvPp3qreprY+dLsD2Y/c3bDJ1U9t6kH2nL2aZJIlfk
+__2hbbpLa1mmG0NjaxMSkkFIHqLeUcDWN07coyZjqGYDw
 
 meta::code('test-utils', <<'__z8Z6urQhJtq+duy0Nk4oeIHrNJJ7Y8r+b2MJln8wbWQ');
 Unit test utilities.
