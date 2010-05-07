@@ -212,8 +212,110 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__ZP2fxo/bCv6xoXBnd4WxHAW1J8v655wrUh3unkMHJIE');
+meta::code('lib', <<'__N08X1fHoVt+HwtGpcBfcZYeSi1yXIxZOw33fBMo3npU');
+Divergence JavaScript Standard Library | Spencer Tipping <spencer@spencertipping.com>
+Licensed under the terms of the MIT source code license
+
+var   tr = [],                                                       ps = [Function, String, Number, Boolean, RegExp, Array],
+       a = function  (x) {return x},                                  k = function (x) {return function () {return x}},
+     arr = function (xs) {return Array.prototype.slice.call (xs)},   k$ = k (a),
+       d = function   () {return d.macro.apply (d, arguments)},     fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
+
+    keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
+    init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
+                                                                            else                                       for (var k in arguments[i]) o[k] = arguments[i][k];
+                          return o},
+     ops = {plus: '+', minus: '-', times: '*', over: '/', modulo: '%', lt: '<', gt: '>', le: '<=', ge: '>=', eq: '==', ne: '!=', req: '===', rne: '!==', and: '&&', or: '||',
+            xor: '^', bitand: '&', bitor: '|', then: ','};
+
+init (String.prototype, (function (c) {return {
+  maps_to: function (v) {var result = {}; result[this] = v; return result},
+   invoke: function  () {return '$2[$0].bind($2).fn.apply($2[$0], $1)'.fn (this.toString (), arguments)},
+   expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
+    alias: function (v) {return d[this] = v.fn()},
+       fn: function  () {var f = d[this] || c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
+
+init (RegExp.prototype, {
+  maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
+       fn: function  () {return this.exec.bind (this)}});
+
+init (Function.prototype, {
+  call_cc: function (c) {var cc = [this, c = c.fn()]; while (cc[0] !== c) cc = cc[0].apply (this, cc.slice(1)); return c.apply (this, cc.slice(1))},
+     tail: function  () {return [this].concat (arr (arguments))},
+     type: function  () {var f = function () {}, c = this; init.apply (this, [f.prototype].concat (arr (arguments))); return function () {var x = new f (); return c.apply (x, arguments)}},
+     bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
+       fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
+
+init (Array.prototype, {
+  sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
+     each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
+     grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
+     fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
+      map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
+       fn: function  () {var xs = this, result = xs.length && (typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
+                                                               typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold (d.init)))} :
+                                                                                            function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))});
+                         return result.fn.apply (result, arguments)}});
+
+init (Boolean.prototype, {fn: function () {return this.valueOf () ? a : (1).fn ()}});
+init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
+
+(d.macro  = tr.push.bind (tr)) (/\$(\d+)/g.maps_to ('"arguments[" + arguments[1] + "]"'.fn()),
+                                     /@_/g.maps_to ('Array.prototype.slice.call(arguments)'),
+                                    /\$_/g.maps_to ('this'),
+                                    /sub/g.maps_to ('function()'),
+                                      /{/g.maps_to ('{return '));
+
+keys (fns).each ('$1.alias($0[$1])'.fn (fns));
+keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
+                               (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))});
+__N08X1fHoVt+HwtGpcBfcZYeSi1yXIxZOw33fBMo3npU
+
+meta::code('lib-tests', <<'__xBxpWfmBj651JIhHappiFJZ4jsLA4ttqLk14ktHXqL8');
+Standard library tests.
+
+
+String tests.
+
+  assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
+  assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}) (6), 5, 'String.invoke');
+  assert_equal ('$_'.expand (), 'this', 'String.expand');
+  assert_equal ('$_ + sub {$_ + 1}'.expand (), 'this + function() {return this + 1}', 'String.expand 2');
+
+Function tests.
+
+  assert_equal ((function (cc) {return cc.tail (5)}).call_cc ('$0'), 5, 'Function.call_cc');
+
+  var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();         // factorial_cps (n, accumulator, continuation)
+  assert_equal (factorial_cps.fn (5, 1).call_cc ('$0'), 120, 'Function.call_cc 2');
+
+  var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
+  assert_equal (sum.fn (10000, 0).call_cc ('$0'), (10000 * 10001) >> 1, 'Function.call_cc 3');          // Runs in constant stack space
+
+Re-entrant continuations tests.
+You can implement re-entrant continuations in JavaScript as long as you make all call/cc invocations tail calls. (This is normal CPS anyway.) Here's how you use it (naturally, normal caveats
+about code readability apply even though this isn't Scheme):
+
+  var factorial_cps_2 = '$0 > 1 ? factorial_cps_2.tail ($0 - 1, $0 * $1, $2) : $2.tail ($2)'.fn ();     // Returns its continuation
+  factorial_cps_2.count = 0;
+  assert_equal (factorial_cps_2.fn (5, 1).call_cc ('$0.cc = $1, ++$0.count'.fn (factorial_cps_2)), 1, 'Function.call_cc re-entrant 1');
+  assert_equal (factorial_cps_2.cc.call_cc ('$0'), 2, 'Function.call_cc re-entrant 2');                 // Have to use call/cc to get back into a continuation
+__xBxpWfmBj651JIhHappiFJZ4jsLA4ttqLk14ktHXqL8
+
+meta::code('main', <<'__62gNjpQAogAYea3mT6e6pTsOh3o22ulR62Mvyxnwg+0');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
+Licensed under the terms of the MIT source code license
+
+var d = (function () {
+
+:: get lib
+:: get parser
+
+}) ();
+__62gNjpQAogAYea3mT6e6pTsOh3o22ulR62Mvyxnwg+0
+
+meta::code('parser', <<'__MkrPwjO7i5iPUvDqZKvpGxMifwxbh+j5413EoiM20uU');
+Divergence JavaScript Parser | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 Language.
@@ -311,7 +413,6 @@ Macros.
 
   Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds but operators don't.
 
-var d = (function (cache) {
   var         d =       function     () {return d.eval.apply (this, arguments)},
              qw =       function    (s) {return s.split (' ')},
             set =       function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
@@ -410,26 +511,10 @@ Lexing.
   for (var k in d.prototypes) d.extend (d.prototypes[k].zero.constructor.prototype, d.prototypes[k]);
 
   return d;
-}) ({});
-__ZP2fxo/bCv6xoXBnd4WxHAW1J8v655wrUh3unkMHJIE
+__MkrPwjO7i5iPUvDqZKvpGxMifwxbh+j5413EoiM20uU
 
-meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
-This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
-:: get main
-__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
-
-meta::code('test', <<'__DRRl0xjlK/18KYBieCgDl2i8l8XQ+oeXWmB/q/cITEo');
-Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
-
-:: get main
-
-  var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
-  var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
-
-  var trace        = function (x) {print (x); return x};
-
-  var test         = function (s) {print (s + '  =>  ' + d.parse (s).shake ().inspect (20))};
+meta::code('parser-tests', <<'__T1f0W/rzT53acq2DkMhNIziX0G74crsudLeZ760Uvsw');
+Parser tests.
 
   test ('foo.bar.bif.baz');
   test ('foo . bar . bif . baz');
@@ -482,7 +567,36 @@ Licensed under the terms of the MIT source code license
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__DRRl0xjlK/18KYBieCgDl2i8l8XQ+oeXWmB/q/cITEo
+__T1f0W/rzT53acq2DkMhNIziX0G74crsudLeZ760Uvsw
+
+meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
+This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
+:: get main
+__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
+
+meta::code('test', <<'__4RvPp3qreprY+dLsD2Y/c3bDJ1U9t6kH2nL2aZJIlfk');
+Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
+Licensed under the terms of the MIT source code license
+
+:: get main
+
+:: get test-utils
+
+:: get lib-tests
+:: get parser-tests
+
+
+__4RvPp3qreprY+dLsD2Y/c3bDJ1U9t6kH2nL2aZJIlfk
+
+meta::code('test-utils', <<'__z8Z6urQhJtq+duy0Nk4oeIHrNJJ7Y8r+b2MJln8wbWQ');
+Unit test utilities.
+
+  var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
+  var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
+
+  var trace        = function (x) {print (x); return x};
+  var test         = function (s) {print (s + '  =>  ' + d.parse (s).shake ().inspect (20))};
+__z8Z6urQhJtq+duy0Nk4oeIHrNJJ7Y8r+b2MJln8wbWQ
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
