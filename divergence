@@ -212,7 +212,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('lib', <<'__SiUVpkhLDC2m2asO4UcLv0J8OC2kUYmW1BJBGM+v/Es');
+meta::code('lib', <<'__ZJjC8aMNysrqVLHVhK4s1BdLTcZ2Bncjv8pXK9JI3F0');
 Divergence JavaScript Standard Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -268,9 +268,9 @@ Licensed under the terms of the MIT source code license
       /\$_/g.macro ('this');
 
   keys (fns).each ('$1.alias($0[$1])'.fn (fns));
-  keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                       + ops[k] + 'y})')));
-                                 (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return f.apply(this,arguments)' + ops[k] + 'g.apply(this,arguments)})')))})}) ();
-__SiUVpkhLDC2m2asO4UcLv0J8OC2kUYmW1BJBGM+v/Es
+  keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
+                                 (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return function(){return f.fn().apply(this,arguments)' + ops[k] + 'g.fn().apply(this,arguments)}})')))})}) ();
+__ZJjC8aMNysrqVLHVhK4s1BdLTcZ2Bncjv8pXK9JI3F0
 
 meta::code('lib-tests', <<'__GjpsMH2VSeX3KOdCxYzoyugN0YRfSJ0KIv7qFJ1n84Y');
 Standard library tests.
