@@ -272,7 +272,7 @@ Licensed under the terms of the MIT source code license
                                  (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return function(){return f.fn().apply(this,arguments)' + ops[k] + 'g.fn().apply(this,arguments)}})')))})}) ();
 __ZJjC8aMNysrqVLHVhK4s1BdLTcZ2Bncjv8pXK9JI3F0
 
-meta::code('lib-tests', <<'__GjpsMH2VSeX3KOdCxYzoyugN0YRfSJ0KIv7qFJ1n84Y');
+meta::code('lib-tests', <<'__5jgLTOBUBTVloTPifQOh9T6d+TiQtskg0pCr6EyuXDA');
 Standard library tests.
 
 String tests.
@@ -295,8 +295,6 @@ Function tests.
 
   var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
   assert_equal (sum.fn (10000, 0).call_cc ('$0'), (10000 * 10001) >> 1, 'Function.call_cc 3');          // Runs in constant stack space
-
-  trace ('The sum from 0 to 10000 is ' + sum.fn (10000, 0).call_cc ('$0'));
 
 Re-entrant continuations tests.
 In Scheme, you can emulate /return/ like this:
@@ -321,21 +319,17 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.call_cc re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.call_cc re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.call_cc re-entrant 3');
-__GjpsMH2VSeX3KOdCxYzoyugN0YRfSJ0KIv7qFJ1n84Y
+__5jgLTOBUBTVloTPifQOh9T6d+TiQtskg0pCr6EyuXDA
 
-meta::code('main', <<'__62gNjpQAogAYea3mT6e6pTsOh3o22ulR62Mvyxnwg+0');
+meta::code('main', <<'__SFZYLFFr2Pti4bXKBWIJVSuW+fKOvPjKGfaHLwfQvp8');
 Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
-var d = (function () {
-
 :: get lib
 :: get parser
+__SFZYLFFr2Pti4bXKBWIJVSuW+fKOvPjKGfaHLwfQvp8
 
-}) ();
-__62gNjpQAogAYea3mT6e6pTsOh3o22ulR62Mvyxnwg+0
-
-meta::code('parser', <<'__8NkaY7xN29GCxiYG49UPPC/yMKpgtvIxjtuVIHrXE/0');
+meta::code('parser', <<'__eVpvhSXudq0t+hvXl/JNJXYswgzl2H/ka3iavPswmwk');
 Divergence JavaScript Parser | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -434,21 +428,22 @@ Macros.
 
   Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds but operators don't.
 
-return (function () {
-  var         d =       function     () {return d.eval.apply (this, arguments)},
-             qw =       function    (s) {return s.split (' ')},
-            set =       function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
-           last =       function   (xs) {return xs[xs.length - 1]},
+var d = (function () {
+  var         d       = function     () {return d.eval.apply (this, arguments)},
+             qw       = function    (s) {return s.split (' ')},
+            set       = function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
+           last       = function   (xs) {return xs[xs.length - 1]},
               s = d.s = function (s, n) {return s === undefined || s === null ? '' : s.to_string ? s.to_string (n) : s.toString ()},
-              $ = null,
+              $       = null,
 
      precedence = {'[!':1, '.':1, '(!':1, 'new':2, 'u++':3, 'u--':3, 'typeof':3, 'u~':3, 'u!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7, '>':7,
                    '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15,
                    '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17},
           right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! new typeof u+ u- u++ u--')),
-        unaries = set(qw('u++ u-- u+ u- u! u~ new typeof')),
+        unaries = set(qw('u++ u-- u+ u- u! u~ new typeof ( [ {')),
          idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
      sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
+ non_sandwiches = set(qw('( [ { ? :')),
           opens = set(qw('( [ { ?')),
            pair = {'(':')', '[':']', '{':'}', '?':':'},
             ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
@@ -481,11 +476,11 @@ Incremental parsing.
                                                                                                              xs.push ($ = syntax (this).verb (x))                   && $ : (op = x) && this},
       parent_to:  function (x) {return p = x, this},
        is_value:  function  () {return xs.length >= arity(op)},
-       sandwich:  function  () {return xs[0] && xs[1] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
+       sandwich:  function  () {return xs[0] && xs[1] && ! non_sandwiches[op] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
           shake:  function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]].concat (xs.slice (2))).shake() :
                                                         xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op(), [xs[0], xs[1].xs[0]].concat (xs.slice (2))).shake() :
                                                         syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]].concat (xs.slice(2))) : this},
-            top:  function  () {return p || this},
+            top:  function  () {return p ? p.top () : this},
         inspect:  function  () {return '("' + op + '" ' + xs.map (function (x) {return x && x.inspect ? x.inspect() : x}).join (' ') + ')'},
        toString:  function (n) {return this.to_string (n)},
       to_string:  function (n) {return ! op && ! xs.length ? '' :
@@ -498,6 +493,17 @@ Incremental parsing.
 Lexing.
   The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
   logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression).
+
+  Feeding tokens to the incremental parser tree is generally easy enough; if there aren't any parentheses involved, then we just hand tokens to whichever tree we have and grab the tree that it
+  gives back. (This latter assignment lets us keep track of where we are in the expression tree.) The hard part arises when we do have parenthesized expressions. We need to make sure that
+  these expressions are sealed off from each other; that is, we can't do any sort of rewrites across paren barriers. This means two things:
+
+    | 1. Any time we have a sealed expression, we need to introduce an identity operator to contain it. Otherwise, expressions with sandwiches would become ambiguous; consider, for example,
+         something like x > ($ > y) -- clearly not meant to be interpreted as x >$> y.
+
+    | 2. In the normal course of expression rewrites we need to be careful not to dig through identity-transformed expressions.
+
+  Once we have these guarantees, we can treat parenthesized blocks normally.
 
   parse = d.parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, escaped = false, es = [syntax()], openers = [], c = function (i) {return s.charAt (i)};
                         while (i < l && ($_ = c(i))) {
@@ -516,26 +522,26 @@ Lexing.
           if (! token) continue;
 
                if ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
-          else if                                      (opens[token]) es.push (syntax(null, '[{?'.indexOf (token) > -1 && token)),         openers.push (token);
-          else if            (token === ':' && last(openers) === '?') $ = es.pop().top().xs, last(es).verb (openers.pop ()).values ($);
-          else if                     (token === pair[last(openers)]) $ = es.pop().top(),    last(es).value ($), openers.pop ();
+          else if                                      (opens[token]) es.push (syntax().verb(token).value(syntax())),                      openers.push (token);
+          else if            (token === ':' && last(openers) === '?') $ = es.pop().top().xs, es[es.length - 1] = last(es).verb (openers.pop ()).values ($);
+          else if                     (token === pair[last(openers)]) $ = es.pop().top(),    es[es.length - 1] = last(es).value ($), openers.pop ();
           else if                                 (precedence[token]) es[es.length - 1] = last(es).verb  (token);
           else                                                        es[es.length - 1] = last(es).value (token);
                         }
                         return es.pop().top()};
 
-  d.extend = function (o, $) {for (var k in $) $.hasOwnProperty (k) && (o[k] = $[k]); return o};
-  d.extend (d, {sandwich: function     () {for (var i = 0, l = arguments.length; i < l; ++i) sandwiches[arguments[i]] = true; return d},
-                   infix: function (s, f) {macros[s] = f; return d},
-                    eval: function    (x) {return eval (d.parse (x).to_string (0))},
-              prototypes: {Number: {zero: 0, '+': function (y) {return this + y}, '-': function (y) {return this - y}}}});
+  (d.extend = function  (o, $) {for (var k in $) $.hasOwnProperty (k) && (o[k] = $[k]); return o}) (d,
+             {sandwich: function     () {for (var i = 0, l = arguments.length; i < l; ++i) sandwiches[arguments[i]] = true; return d},
+                 infix: function (s, f) {macros[s] = f; return d},
+                  eval: function    (x) {return eval (d.parse (x).to_string (0))},
+            prototypes: {Number: {zero: 0, '+': function (y) {return this + y}, '-': function (y) {return this - y}}}});
 
   for (var k in d.prototypes) d.extend (d.prototypes[k].zero.constructor.prototype, d.prototypes[k]);
 
   return d}) ();
-__8NkaY7xN29GCxiYG49UPPC/yMKpgtvIxjtuVIHrXE/0
+__eVpvhSXudq0t+hvXl/JNJXYswgzl2H/ka3iavPswmwk
 
-meta::code('parser-tests', <<'__T1f0W/rzT53acq2DkMhNIziX0G74crsudLeZ760Uvsw');
+meta::code('parser-tests', <<'__T5SJ6ugeGjXZaOZYrWvTOAsbBrYKrlZkjFAT7zjRBMY');
 Parser tests.
 
   test ('foo.bar.bif.baz');
@@ -549,6 +555,8 @@ Parser tests.
 
   test ('x >$> (x + 1)');
   test ('x >$>$> (x + 1)');
+
+  test ('(foo << bar) >>$- (x >$> x + 1)');
 
   test ('[1, 2, 3] * (x >$> x + 1)');
   test ('[1, 2, 3] * (x >$> x) + 1');
@@ -589,7 +597,7 @@ Parser tests.
   test ('{foo: "bar", bif: "baz"}');
   test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
   test ('[foo, bar, bif, baz]');
-__T1f0W/rzT53acq2DkMhNIziX0G74crsudLeZ760Uvsw
+__T5SJ6ugeGjXZaOZYrWvTOAsbBrYKrlZkjFAT7zjRBMY
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
