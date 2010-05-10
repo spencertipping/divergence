@@ -78,12 +78,15 @@ meta::define_form 'internal_function', sub {
 };
 __heBxmlI7O84FgR+9+ULeiCTWJ4hqd079Z02rZnl9Ong
 
-meta::meta('datatypes::library', <<'__3RHc2q2OKjeHL1QRq6jhHHCeSrNLDPWTwSax7MclXRE');
+meta::meta('datatypes::library', <<'__Uu9nRiHABRn+x19zBWmHpJF8gbfMA5v5MlpNoSE8MqE');
 meta::define_form 'library', sub {
-  eval $_[1];
+  my ($name, $value) = @_;
+  eval $value;
+  $externalized_functions{$name} = "library::$name";
+  *{$name} = sub {edit("library::$name")};
   warn $@ if $@;
 };
-__3RHc2q2OKjeHL1QRq6jhHHCeSrNLDPWTwSax7MclXRE
+__Uu9nRiHABRn+x19zBWmHpJF8gbfMA5v5MlpNoSE8MqE
 
 meta::meta('datatypes::list-type', <<'__OKczvJ+6wi8VPNFcZ9ohlXjw+ychodWCfcELdli9p+w');
 meta::define_form '_list_type', sub {
@@ -329,7 +332,7 @@ Licensed under the terms of the MIT source code license
 :: get parser
 __SFZYLFFr2Pti4bXKBWIJVSuW+fKOvPjKGfaHLwfQvp8
 
-meta::code('parser', <<'__tmqXbywiri7zU2i2S0roomCgUggU4JThblAxe6uBQoc');
+meta::code('parser', <<'__lsDohhWWZgetAAS3M0NiAQSy1Zm/LNewZgdLU5ucYN4');
 Divergence JavaScript Parser | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -475,10 +478,10 @@ Incremental parsing.
                                                        (p || syntax().verb(x).value (this)) : xs.push ($ = syntax (this).verb (x).value (xs.pop ())) && $ : (op = x) && this},
       parent_to:  function (x) {return p = x, this},
        is_value:  function  () {return xs.length >= arity(op)},
-       sandwich:  function  () {return xs[0] && xs[1] && ! non_sandwiches[op] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},
-          shake:  function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]].concat (xs.slice (2))).shake() :
+/*       sandwich:  function  () {return xs[0] && xs[1] && ! non_sandwiches[op] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},*/
+/*          shake:  function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]].concat (xs.slice (2))).shake() :
                                                         xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op(), [xs[0], xs[1].xs[0]].concat (xs.slice (2))).shake() :
-                                                        syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]].concat (xs.slice(2))) : this},
+                                                        syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]].concat (xs.slice(2))) : this},*/
             top:  function  () {return p ? p.top () : this},
         inspect:  function  () {return '("' + op + '" ' + xs.map (function (x) {return x && x.inspect ? x.inspect() : x}).join (' ') + ')'},
        toString:  function (n) {return this.to_string (n)},
@@ -538,7 +541,7 @@ Lexing.
   for (var k in d.prototypes) d.extend (d.prototypes[k].zero.constructor.prototype, d.prototypes[k]);
 
   return d}) ();
-__tmqXbywiri7zU2i2S0roomCgUggU4JThblAxe6uBQoc
+__lsDohhWWZgetAAS3M0NiAQSy1Zm/LNewZgdLU5ucYN4
 
 meta::code('parser-tests', <<'__T5SJ6ugeGjXZaOZYrWvTOAsbBrYKrlZkjFAT7zjRBMY');
 Parser tests.
@@ -792,14 +795,28 @@ my (undef, undef, $mode) = stat $0;
 chmod $mode & 0555, $0;
 __pqf/HijyN91BWpnS+uWYip/mFhHhcd+M9/YdlYsvv9Y
 
-meta::function('ls', <<'__M3wGXSw8/xm3RiNq0uLWke1dHm2OWQbvJpHkngdPafg');
-join("\n", sort keys %externalized_functions);
-__M3wGXSw8/xm3RiNq0uLWke1dHm2OWQbvJpHkngdPafg
-
-meta::function('ls-a', <<'__ZF0mLdFoa0pys6NZ+Yz5lsmaE2GeJMG2Aw1C3j88moQ');
+meta::function('ls', <<'__OlQOgKhp6VUThx34wxmM3MFkwsHfR/c8dqvu07z059E');
 my $criteria = join '|', @_;
-join("\n", grep(/$criteria/, sort keys %data));
-__ZF0mLdFoa0pys6NZ+Yz5lsmaE2GeJMG2Aw1C3j88moQ
+my @lines = grep /$criteria/, sort keys %externalized_functions;
+my $length = 0;
+$length >= length($_) or $length = length($_) for @lines;
+
+my @new_lines = map($_ . ' ' x ($length + 2 - length($_)) . $externalized_functions{$_}, @lines);
+join("\n", sort @new_lines);
+__OlQOgKhp6VUThx34wxmM3MFkwsHfR/c8dqvu07z059E
+
+meta::function('ls-a', <<'__S5EydJRu+YIfcFmTMz1ZHX0cANJq32bU5JnYCe1tWdk');
+my $criteria = join '|', @_;
+my @lines    = grep(/$criteria/, sort keys %data);
+my $length   = 0;
+
+my %inverses;
+$inverses{$externalized_functions{$_}} = $_ for keys %externalized_functions;
+
+$length >= length($_) or $length = length($_) for @lines;
+my @new_lines = map($_ . ' ' x ($length + 2 - length($_)) . ($inverses{$_} || ''), @lines);
+join "\n", @new_lines;
+__S5EydJRu+YIfcFmTMz1ZHX0cANJq32bU5JnYCe1tWdk
 
 meta::function('mv', <<'__ijyNZ8r34FVK0Ki9/Q0Irx5k9U0pZ+/frrdlu+qkEP4');
 my ($from, $to) = @_;
@@ -992,15 +1009,17 @@ my (undef, undef, $mode) = stat $0;
 chmod $mode | 0200, $0;
 __08PohCY8fcNe+pWCO6ic6XOOKv48NkrxpNMmTOUIFdA
 
-meta::function('update-from', <<'__8cUncWUFuzX5fV+tgmVU+RvuWGPysHg3WqI6pYTcrQI');
+meta::function('update-from', <<'__jJ2tfSk/Quz8/1PiYxIwQjBRt/hYg51iJhAdxcdaHkM');
 # Upgrade all attributes that aren't customized. In this case, we want everything except for configuration::, code::, and attribute::.
 return "That is a really bad idea." if $0 =~ /\.\/(.*)/ && $_[0] eq $1 || $_[0] eq $0;
+
+my @attributes = map {s/\s+.*//; $_} split(/\n/, qx|$_[0] ls-a|);
 
 terminal::message('info', 'Replicating state...');
 &{'push-state'}();
 terminal::message('info', 'Updating meta attributes...');
-for my $attribute (grep length && /^meta::/, split(/\n/, `$_[0] ls-a`)) {
-  associate($attribute, join('', `$_[0] cat $attribute`));
+for my $attribute (grep length && /^meta::/, @attributes) {
+  associate($attribute, join('', qx|$_[0] cat $attribute|));
   reload();
   print '.';
 }
@@ -1008,8 +1027,8 @@ for my $attribute (grep length && /^meta::/, split(/\n/, `$_[0] ls-a`)) {
 print "\n";
 terminal::message('info', 'Updating non-meta attributes...');
 for my $attribute (grep length && ! (/^configuration::/ || /^code::/ || /^attribute::/ || /^function::pop-state$/ ||
-                                     /^list::/ || /^issue::/ || /^data::/ || /^meta::datatypes/), split(/\n/, `$_[0] ls-a`)) {
-  associate($attribute, join('', `$_[0] cat $attribute`));
+                                     /^list::/ || /^issue::/ || /^data::/ || /^meta::datatypes/), @attributes) {
+  associate($attribute, join('', qx|$_[0] cat $attribute|));
   reload();     # Necessary to activate new datatypes.
   print '.';
 }
@@ -1018,7 +1037,7 @@ print "\n";
 terminal::message('info', 'Reloading new configuration');
 reload();
 terminal::message('info', "Imported from $_[0]. Run pop-state to undo this change.");
-__8cUncWUFuzX5fV+tgmVU+RvuWGPysHg3WqI6pYTcrQI
+__jJ2tfSk/Quz8/1PiYxIwQjBRt/hYg51iJhAdxcdaHkM
 
 meta::function('usage', <<'__oHVev4RtZlF/82SSE87y4Bf7ran2afn/HDtukOQBf9I');
 <<"EOD" . join '  ', split /\n/, ls ();
