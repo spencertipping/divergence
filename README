@@ -34,8 +34,9 @@ You can also use /fn/ on regular functions:
 
 Inline macro processing.
 When a string is promoted to a function, it is run through macro transformations first. This allows you to use shorthands
-such as $_ for /this/, @_ for /Array.prototype.slice.call(arguments)/, and $n for /arguments[n]/. You can add new macros
-by specifying a regular expression with an expander function (new macros are processed after all previously-defined ones):
+such as $_ for /this/, @_ for /Array.prototype.slice.call(arguments)/, $n for /arguments[n]/, and @foo for /this.foo/. You
+can add new macros by specifying a regular expression with an expander function (new macros are processed after all
+previously-defined ones):
 
   /sqr\(([^)]+)\)/g.macro ('"(" + $1 + " * " + $1 + ")"'.fn());
 
