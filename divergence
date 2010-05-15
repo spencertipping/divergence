@@ -406,6 +406,10 @@ meta::function('code', <<'__NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA');
 join "\n\n", map preprocess(retrieve("code::$_")), @_;
 __NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA
 
+meta::function('compile', <<'__4rLK+mSH5O5fyV/Nh8pIqhT/0KrHl/Ls+KuyK2ECMl0');
+file::write('divergence.js', unlit('main'));
+__4rLK+mSH5O5fyV/Nh8pIqhT/0KrHl/Ls+KuyK2ECMl0
+
 meta::function('cp', <<'__yn1SQkcEk6o+gnuCy3QGVFtQb2piaCoUdJPGUkLjpD4');
 my ($from, $to) = @_;
 $data{$to} = $data{$from} if $data{$from};
