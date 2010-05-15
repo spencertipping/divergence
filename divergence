@@ -215,74 +215,91 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('lib', <<'__ZJjC8aMNysrqVLHVhK4s1BdLTcZ2Bncjv8pXK9JI3F0');
-Divergence JavaScript Standard Library | Spencer Tipping <spencer@spencertipping.com>
+meta::code('main', <<'__MoRd2le+GNARsPepkL/4yl2lgSMZ3NvljAAg43clYDM');
+Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
-(function () {
-  var   tr = [],                                                      ps = [Function, String, Number, Boolean, RegExp, Array],
-         a = function  (x) {return x},                                 k = function (x) {return function () {return x}},
-       arr = function (xs) {return Array.prototype.slice.call (xs)},  k$ = k (a),
-   aliases = {},                                                     fns = {'()': '$0($1)', '[]': '$0[$1]', '!': '!$0', '!!': '!!$0', '~': '~$0'},
+var d = (function () {
+  var d = function () {return d[d.default_action].apply (this, arguments)};
+  d.init = function (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
+                                                                                                  else                          for (var k in $_) o[k] = $_[k]; return o};
+  d.init (d, {inline_macros:  [],            id: function    (x) {return x},
+                functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
+                    aliases:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]))}); return x},
+             default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
+      functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
+                                   macro_expand: function    (s) {d.inline_macros.each (function (m) {s = m(s)}); return s},
+                                          alias: function (s, f) {d.aliases[s] = f.fn(); return d},
+                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
 
-      keys = function  (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
-      init = function  (o) {for (var i = 1, l = arguments.length; i < l; ++i) if (arguments[i].constructor === Function) arguments[i].call (o);
-                                                                              else                                       for (var k in arguments[i]) o[k] = arguments[i][k];
-                            return o},
-       ops = {plus: '+', minus: '-', times: '*', over: '/', modulo: '%', lt: '<', gt: '>', le: '<=', ge: '>=', eq: '==', ne: '!=', req: '===', rne: '!==', and: '&&', or: '||',
-              xor: '^', bitand: '&', bitor: '|', then: ','};
+  d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
+                                               lookup: function  () {return '[$1].concat ($0.split(".")).fold("[]")'.fn(this)},
+                                                alias: function (f) {return d.alias (this, f)},
+                                                   fn: function  () {var s = d.macro_expand (this), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
+                                                                     return f.fn.apply (f, arguments)}}}) ({}));
 
-  init (String.prototype, (function (c) {return {
-    maps_to: function (v) {var result = {}; result[this] = v; return result},
-     invoke: function  () {return '$2[$0].bind($2).fn.apply($2[$0], $1)'.fn (this.toString (), arguments)},
-     expand: function  () {var s = this; for (var i = 0, l = tr.length; i < l; ++i) s = tr[i] (s); return s},
-      alias: function (v) {return aliases[this] = v.fn()},
-         fn: function  () {var f = aliases[this] || c[this] || (c[this] = eval ('(function(){return ' + this.expand () + '})')); return f.fn.apply (f, arguments)}}}) ({}));
+  d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
+                          macro: function (f) {return d.macro (this, f)},
+                             fn: function  () {var f = this.exec.bind (this); return f.fn.apply (f, arguments)}});
 
-  init (RegExp.prototype, {
-    maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
-      macro: function (f) {tr.push (this.maps_to (f)); return this},
-         fn: function  () {return this.exec.bind (this)}});
+  d (Array.prototype, {flat_map: function (f) {var xs = [], f = f.fn(); this.each (function (x) {xs.push.apply (xs, f(x))}); return xs},
+                        sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
+                           each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
+                           grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
+                           fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
+                            map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
+                             fn: function  () {var xs = this, f = function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))}; return f.fn.apply (f, arguments)}});
 
-  init (Function.prototype, {
-    call_cc: function (c) {var cc = [this, [c = c.fn()]]; while (cc[0] !== c) cc = cc[0].apply (this, cc[1]); return c.apply (this, cc[1])},
-      curry: function (n) {var f = this; return n > 1 ? function () {var as = arr (arguments); return function () {return f.curry (n - 1).apply (this, as.concat (arr (arguments)))}} : this},
-       tail: function  () {return [this, arguments]},
-       type: function  () {var f = function () {}, c = this; init.apply (this, [f.prototype].concat (arr (arguments))); return function () {var x = new f (); return c.apply (x, arguments)}},
-       bind: function (x) {var f = this; return function () {return f.apply (x, arguments)}},
-         fn: function  () {var f = this, xs = arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (arr (arguments)))} : this}});
-
-  init (Array.prototype, {
-    sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
-       each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
-       grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
-       fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
-        map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
-         fn: function  () {var xs = this, result = xs.length && (typeof xs[0] === typeof  0 ? function () {return xs.map ('[]'.fn (arguments))} :
-                                                                 typeof xs[0] === typeof '' ? function () {return xs.map ('[]'.fn ([{}].concat (arr (arguments)).fold (d.init)))} :
-                                                                                              function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))});
-                           return result.fn.apply (result, arguments)}});
-
-  init (Boolean.prototype, {fn: function () {return this.valueOf () ? a : (1).fn ()}});
-  init  (Number.prototype, {fn: function () {var x = this; return function () {return arguments[x]}}});
+  d (Function.prototype, {fn: function () {var f = this, xs = d.arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (d.arr (arguments)))} : f}});
+  d  (Boolean.prototype, {fn: function () {return this.valueOf () ? d.id.fn.apply (d.fn, arguments) : (1).fn ()}});
+  d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
 
   /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
        /@_/g.macro ('Array.prototype.slice.call(arguments)');
       /\$_/g.macro ('this');
 
-  keys (fns).each ('$1.alias($0[$1])'.fn (fns));
-  keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
-                                 (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return function(){return f.fn().apply(this,arguments)' + ops[k] + 'g.fn().apply(this,arguments)}})')))})}) ();
-__ZJjC8aMNysrqVLHVhK4s1BdLTcZ2Bncjv8pXK9JI3F0
+  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('$0.prototype')).push (d.functional_extensions);
 
-meta::code('lib-tests', <<'__5jgLTOBUBTVloTPifQOh9T6d+TiQtskg0pCr6EyuXDA');
+  (function (fns, ops) {d.keys (fns).each ('$1.alias($0[$1])'.fn (fns));
+                        d.keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
+                                                         (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return function(){return f.fn().apply(this,arguments)' + ops[k] +
+                                                                                                                                              'g.fn().apply(this,arguments)}})')))})}) (
+    {'()':'$0($1)', '[]':'$0[$1]', '!':'!$0', '!!':'!!$0', '~':'~$0'},
+    {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==', and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:','});
+
+  d.functions ({
+    prototype:  function  () {var f = this.fn(), g = function () {f.apply (this, arguments)}; d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
+      compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f (g.apply (this, arguments))}},
+       plural:  function  () {return '$1.map ($0)'.fn(this)},
+        curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
+        proxy:  function (g) {var f = this.fn(), g = g.fn(); return function () {return f.apply.apply (f, g (this, arguments))}},
+         bind:  function (x) {var f = this.fn(); return d.init (function () {return f.apply (x, arguments)}, {binding: x, original: f})},
+         type:  function  () {var f = function () {}, c = this.fn(); d.init.apply (this, [f.prototype].concat (d.arr (arguments))); return function () {return c.apply (new f(), arguments)}},
+         tail: '[$_, @_]'.fn(),
+          cps:  function (c) {var cc = [this.fn(), [c = c.fn()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
+
+  return d}) ();
+__MoRd2le+GNARsPepkL/4yl2lgSMZ3NvljAAg43clYDM
+
+meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
+This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
+:: get main
+__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
+
+meta::code('test', <<'__yGNKcqFFxQCkLeEbyzJmLHJY4KtaPBtcnAF8pA4EVus');
+Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
+Licensed under the terms of the MIT source code license
+
+:: get main
+
+:: get test-utils
+
 Standard library tests.
 
 String tests.
 
   assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
-  assert_equal ('foo'.invoke (5) ({foo: function (x) {return x}}) (6), 5, 'String.invoke');
-  assert_equal ('$_'.expand (), 'this', 'String.expand');
+  assert_equal (d.macro_expand ('$_'), 'this', 'String.expand');
 
 Function tests.
 
@@ -291,13 +308,13 @@ Function tests.
   assert_equal (add.curry (2) (1, 2) (3, 4, 5), 15,    'Function curry');
   assert_equal (add.curry (5) (1) (2) (3) (4) (5), 15, 'Function curry');
 
-  assert_equal ((function (cc) {return cc.tail (5)}).call_cc ('$0'), 5, 'Function.call_cc');
+  assert_equal ((function (cc) {return cc.tail (5)}).cps ('$0'), 5, 'Function.cps');
 
   var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();         // factorial_cps (n, accumulator, continuation)
-  assert_equal (factorial_cps.fn (5, 1).call_cc ('$0'), 120, 'Function.call_cc 2');
+  assert_equal (factorial_cps.fn (5, 1).cps ('$0'), 120, 'Function.cps 2');
 
   var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
-  assert_equal (sum.fn (10000, 0).call_cc ('$0'), (10000 * 10001) >> 1, 'Function.call_cc 3');          // Runs in constant stack space
+  assert_equal (sum.fn (10000, 0).cps ('$0'), (10000 * 10001) >> 1, 'Function.cps 3');          // Runs in constant stack space
 
 Re-entrant continuations tests.
 In Scheme, you can emulate /return/ like this:
@@ -318,305 +335,11 @@ about code readability apply even though this isn't Scheme):
 
   var factorial_cps_2 = '$0 > 1 ? factorial_cps_2.tail ($0 - 1, $0 * $1, $2) : $2.tail ($2)'.fn ();     // Returns its continuation
   factorial_cps_2.count = 0;
-  assert_equal (factorial_cps_2.fn (5, 1).call_cc ('$0.cc || ($0.cc = $1), ++$0.count'.fn (factorial_cps_2)), 1, 'Function.call_cc re-entrant 1');
-  assert_equal (factorial_cps_2.cc (), 2, 'Function.call_cc re-entrant 2');
-  assert_equal (factorial_cps_2.cc (), 3, 'Function.call_cc re-entrant 3');
-  assert_equal (factorial_cps_2.cc (), 4, 'Function.call_cc re-entrant 3');
-__5jgLTOBUBTVloTPifQOh9T6d+TiQtskg0pCr6EyuXDA
-
-meta::code('main', <<'__SFZYLFFr2Pti4bXKBWIJVSuW+fKOvPjKGfaHLwfQvp8');
-Divergence JavaScript Library | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
-
-:: get lib
-:: get parser
-__SFZYLFFr2Pti4bXKBWIJVSuW+fKOvPjKGfaHLwfQvp8
-
-meta::code('parser', <<'__lsDohhWWZgetAAS3M0NiAQSy1Zm/LNewZgdLU5ucYN4');
-Divergence JavaScript Parser | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
-
-Language.
-  Divergence is a functional subset of JavaScript. It translates expressions to support operator overloading, but does not support any statement constructs (e.g. if, for, while, function,
-  etc). Generally there are workarounds for these; for example, you can create a function like this:
-
-    | x >$> (x + 1)     // equivalent to (function (x) {return x + 1})
-
-Divergence standard library.
-  When you're constructing anonymous functions with the >$> infix operator, you'll run into some limitations of the JavaScript parse tree. One is that code blocks don't fit into an expression
-  context, so you're limited to using only valid expressions and operators. This creates a number of limitations:
-
-    | 1. No if, for, while, do, throw, try/catch, switch, return, break, continue, etc. statements
-    | 2. No variable definitions with /var/ (though see the <- operator)
-
-  This section describes ways of working around these limitations.
-
-  The /if/ statement is unavailable in expression context. To perform conditional execution, the ||, &&, and ?: operators should be used with the comma operator. Alternatively, you can use the
-  Boolean monad to bind against an anonymous function:
-
-    | condition >>$- (x >$> 'foo')         // equivalent to condition && 'foo'
-
-  Similarly, the /for/ and /while/ constructs are also unavailable. To perform tail-recursive looping, you should use the Array map operator (also written as *) or bind the array monad to a
-  function:
-
-    | [1, 2, 3] * (x >$> x + 1)            // [2, 3, 4]
-    | [1, 2, 3] >>$- (x >$> [x, x + 1])    // [1, 2, 2, 3, 3, 4]
-
-  Anonymous functions don't have to be constructed with the >$> operator. In practice, you will probably use a more compact notation such as this:
-
-    | [1, 2, 3] * ($_ + 1)
-    | [1, 2, 3] >>$- [$_, $_ + 1]
-
-  $_ is the identity function (available outside of divergent functions as d.$_), and functions overload operators to compose. Values that aren't functions, such as 1, are callable and return
-  themselves. Arrays call each of their parameters as a function when called, so this distributive law holds:
-
-    | [f, g] (5)                    // [f(5), g(5)]
-    | [f, g] >>$- (x >$> x (5))
-
-  Note that the invocation operator () is translated into the '(!' method, so any data type can overload it.
-
-Semigroup properties.
-  Most types are monoidal, though most are not commutative. A type indicates that it is monoidal by providing a 'zero' attribute directly on the constructor and overloading the + operator,
-  like this:
-
-    | String.zero + 'foo'
-
-  Arrays, functions, strings, booleans, and numbers are all monoids with the zero elements [], $_, '', false, and 0, respectively. (Notably omitted are hashes for obvious reasons.) Their
-  semantics are straightforward:
-
-    | [x1, x2, ..., xn] + [y1, y2, ..., yn] = [x1, x2, ..., xn, y1, y2, ..., yn]
-    | (f1 + f2) (x) = f1(x) + f2(x)
-    | b1 + b2 = b1 ^ b2
-    | n1 + n2 = n1 + n2
-
-  All pure functions are homomorphic under most operations. The only notable exception is the invocation operator, which clearly behaves differently -- e.g. f1(f2)(x) != f1(x)(f2(x)).
-
-Operators.
-  Because functions in JavaScript must compile into a valid JavaScript parse tree, there are some limitations placed on the operators that can be overloaded. In particular, one cannot create
-  new operators arbitrarily, so defining the binary ++ operator to concatenate arrays, for example, would be invalid. However, by (mis)using the $ character (which parses as an identifier, but
-  when sandwiched between two binary operators is considered by Divergence to be a part of those binary operators -- see the set 'sandwiches' below), we can create new compound operators that
-  widen our options:
-
-    | x >$> (x + 1)             // the lambda operator (which is a macro; see below)
-    | x >$+ 'foo'               // an operator whose behavior has yet to be defined
-    | x <<$* [1, 2, 3]          // ditto
-    | x +$+ [1, 2, 3]           // maybe this will be an acceptable alternative to ++
-    | x +_$% {foo: 'bar'}       // you can also use up to three of the '_' and '$' characters, as long as all '$' come after '_'
-
-  You can create new sandwich identifiers. For example, suppose you wanted to use the operator +d+. Then you'd say this:
-
-    | d.sandwich ('d');
-
-  This would impose the limitation that you wouldn't be able to refer to 'd' in the middle of a set of binary operations, no matter how deeply parenthesized (because parens are erased by
-  SpiderMonkey's function deparser) -- but you could use it to begin an expression. You can also alias it in cases where it is needed:
-
-    | (dPrime >$> (x >> dPrime >> foo)) (d)
-
-  The only hard rule put into place is that you can't use lvalue-sensitive operators (these include assignment operators, ++, and --). Other than that, you're free to overload as many of these
-  operators as you'd like. Their precedence, however, is determined by JavaScript's precedence rules; this is a necessary evil because SpiderMonkey's toString() function removes unnecessary
-  parentheses. If the >$> operator were assumed to have precedence equivalent to =, for example, then you would be unable to define the expression (x >$> x) < 5 because the () around >$> would
-  be erased. So unfortunately it has relational-operator precedence, making it necessary to say x >$> (x < 5) rather than the more convenient x >$> x < 5.
-
-  Operators always map to method calls. The method calls are simply the characters of the operator, so for instance the expression 'x >>$- (y + z)' is translated into 'x[">>$-"](y["+"](z))'.
-
-Macros.
-  Sometimes you want to write an operator or function that has the ability to rewrite code. Fortunately, this is quite a straightforward process. The >$> macro is one such construct, and it is
-  defined like this:
-
-    | d.infix ('>$>', function (xs) {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'});
-
-  There are a couple of reasons I decided to go with this somewhat weak macro model. The first is that this code is likely to be compiled each time the JavaScript is loaded (though you can
-  always call toString() on the resulting function to grab its source and save it for later), so it's important to minimize the overhead of processing it; the second is that an overuse of
-  macros can be detrimental to code maintainability. (Though far be it from me to try to protect programmers from themselves.)
-
-  Also, think carefully before making an operator into a macro. Once you do this, objects won't be able to overload that operator anymore. Functions have workarounds but operators don't.
-
-var d = (function () {
-  var         d       = function     () {return d.eval.apply (this, arguments)},
-             qw       = function    (s) {return s.split (' ')},
-            set       = function   (xs) {return (function ($) {for (var i = 0, l = xs.length; i < l; ++i) $[xs[i]] = true; return $}) ({})},
-           last       = function   (xs) {return xs[xs.length - 1]},
-              s = d.s = function (s, n) {return s === undefined || s === null ? '' : s.to_string ? s.to_string (n) : s.toString ()},
-              $       = null,
-
-     precedence = {'[!':1, '.':1, '(!':1, 'new':2, 'u++':3, 'u--':3, 'typeof':3, 'u~':3, 'u!':3, 'u+':3, 'u-':3, '*':4, '/':4, '%':4, '+':5, '-':5, '<<':6, '>>':6, '>>>':6, '<':7, '>':7,
-                   '<=':7, '>=':7, 'instanceof':7, 'in':7, '==':8, '!=':8, '===':8, '!==':8, '&':9, '^':10, '|':11, '&&':12, '||':13, '?':14, '=':15, '+=':15, '-=':15, '*=':15, '/=':15,
-                   '%=':15, '&=':15, '|=':15, '^=':15, '<<=':15, '>>=':15, '>>>=':15, ':': 16, ',':17, '(':18, '[':18, '{':18},
-          right = set(qw('= += -= *= /= %= &= ^= |= <<= >>= >>>= u~ u! new typeof u+ u- u++ u--')),
-        unaries = set(qw('u++ u-- u+ u- u! u~ new typeof ( [ {')),
-         idents = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'.split ('')),
-     sandwiches = set(qw('$ $$ $$$ _ __ ___ _$ _$$ __$')),
- non_sandwiches = set(qw('( [ { ? :')),
-          opens = set(qw('( [ { ?')),
-           pair = {'(':')', '[':']', '{':'}', '?':':'},
-            ops = set(qw('+ - * / % & | ^ ! ~ = < > ? : ; . ,')),
- lvalue_assigns = set(qw('+= -= *= /= %= ^= &= |= <<= >>= >>>=')),
- literal_binary = set(qw('= , . : === !==')),
-  literal_unary = set(qw('u++ u-- u!')),
-   translations = {'u+':'+', 'u-':'-', 'u~':'~', 'u!':'!', 'u--':'--', 'u++':'++'},
-            max = 20,
-         macros = (function ($) {for (var k in lvalue_assigns) $[k] = (function (k) {return function (xs) {
-                                   return '(' + s(xs[0], prec('=')) + ' = ' + s(syntax(null, k.substr (0, k.length - 1), xs), prec('=')) + ')'}}) (k);
-                                 return $}) ({  '{': function (xs)    {return '{' + s(xs[0], max) + '}'}, '[': function (xs) {return '[' + s(xs[0], max) + ']'},
-                                                '?': function (xs, n) {return s(xs[0], n) + '?' + s(xs[1], max) + ':' + s(xs[2], n)},
-                                              '>$>': function (xs)    {return '(function(' + s(xs[0], max) + '){return ' + s(xs[1], max) + '})'}}),
-
-           prec = function (op) {return precedence[op] || max},
-          arity = function (op) {return ! op || unaries[op] || '[{'.indexOf(op) > -1 ? 1 : op === '?' ? 3 : 2},
-           disp = function (op) {return translations[op] || op},
-
-Incremental parsing.
-  Operator-precedence parsing is done with incremental tree rewrites. Each tree node knows its intended arity (luckily this is fixed for each operator) and its precedence, and it accepts new
-  values and 'verbs', or operators. When a new value is encountered, it is added to the bottom-most tree with room for it.
-
-         syntax = d.syntax = function (p, op, xs) {xs || (xs = []);
-  return {   xs:  xs,
-             op:  function  () {return op},
-          value:  function (x) {return p && xs.length >= arity(op) ? p.value (x) : (xs.push (x), x && x.parent_to && x.parent_to (this) || this)},
-         values:  function ($) {var o = this; for (var i = 0, l = $.length; i < l; ++i) $[i] && (o = o.value ($[i])); return o},
-           verb:  function (x) {return op ? prec(x) - !! right[x] >= prec(op) ?
-                                                       (p || syntax().verb(x).value (this)) : xs.push ($ = syntax (this).verb (x).value (xs.pop ())) && $ : (op = x) && this},
-      parent_to:  function (x) {return p = x, this},
-       is_value:  function  () {return xs.length >= arity(op)},
-/*       sandwich:  function  () {return xs[0] && xs[1] && ! non_sandwiches[op] ? sandwiches[xs[0]] ? -1 : sandwiches[xs[1]] ? 1 : 0 : 0},*/
-/*          shake:  function  () {return xs[0] && xs[1] ? xs[0].sandwich && xs[0].sandwich() ===  1 ? syntax(p, xs[0].op() + xs[0].xs[1] + op, [xs[0].xs[0], xs[1]].concat (xs.slice (2))).shake() :
-                                                        xs[1].sandwich && xs[1].sandwich() === -1 ? syntax(p, op + xs[1].xs[0] + xs[1].op(), [xs[0], xs[1].xs[0]].concat (xs.slice (2))).shake() :
-                                                        syntax(p, op, [xs[0].shake ? xs[0].shake() : xs[0], xs[1].shake ? xs[1].shake() : xs[1]].concat (xs.slice(2))) : this},*/
-            top:  function  () {return p ? p.top () : this},
-        inspect:  function  () {return '("' + op + '" ' + xs.map (function (x) {return x && x.inspect ? x.inspect() : x}).join (' ') + ')'},
-       toString:  function (n) {return this.to_string (n)},
-      to_string:  function (n) {return ! op && ! xs.length ? '' :
-                                                      ! op ? xs.join(',') :
-                                                macros[op] ? macros[op].call (this, xs, n) :
-                                              prec(op) > n ? '(' + this.to_string(max) + ')' :
-                                        literal_binary[op] ? s(xs[0], prec(op)) + disp(op) + s(xs[1], prec(op)) :
-                                                             s(xs[0], prec(op)) + '["' + disp(op) + '"](' + s(xs[1], max) + ')'}}},
-
-Lexing.
-  The lexer is for the most part straightforward. The only tricky bit is regular expression parsing, which requires the lexer to contextualize operators and operands. I've implemented this
-  logic with a expect_re flag that indicates whether the last token processed was an operator (if so, then we're expecting an operand and the next / delineates a regular expression).
-
-  Feeding tokens to the incremental parser tree is generally easy enough; if there aren't any parentheses involved, then we just hand tokens to whichever tree we have and grab the tree that it
-  gives back. (This latter assignment lets us keep track of where we are in the expression tree.) The hard part arises when we do have parenthesized expressions. We need to make sure that
-  these expressions are sealed off from each other; that is, we can't do any sort of rewrites across paren barriers. This means two things:
-
-    | 1. Any time we have a sealed expression, we need to introduce an identity operator to contain it. Otherwise, expressions with sandwiches would become ambiguous; consider, for example,
-         something like x > ($ > y) -- clearly not meant to be interpreted as x >$> y.
-
-    | 2. In the normal course of expression rewrites we need to be careful not to dig through identity-transformed expressions.
-
-  Once we have these guarantees, we can treat parenthesized blocks normally.
-
-  parse = d.parse = function (s) {var i = 0, $_, l = s.length, token = '', expect_re = true, escaped = false, es = [syntax()], openers = [], c = function (i) {return s.charAt (i)};
-                        while (i < l && ($_ = c(i))) {
-          escaped = !! (token = '');
-               if                                (/\s/.test ($_))                                                      ++i;
-          else if                  ('([{?:}])'.indexOf ($_) > -1)                                                      expect_re = '([{?:'.indexOf (token = $_) > -1, ++i;
-          else if                ($_ === '/' && c(i + 1) === '*') while (c(++i) !== '/' || c(i - 1) !== '*' || ! ++i);
-          else if                ($_ === '/' && c(i + 1) === '/') while            (c(++i) !== '\n' && c(i) !== '\r');
-          else if ($_ === '/' &&    expect_re &&  (token = '/'))  while   (($_ = c(++i)) !== '/' || escaped || ! ++i)  expect_re =  ! (token += c(i)), escaped = ! escaped && $_ === '\\';
-          else if ($_ === '"' && ! (expect_re = ! (token = '"'))) while   (($_ = c(++i)) !== '"' || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
-          else if ($_ === "'" && ! (expect_re = ! (token = "'"))) while   (($_ = c(++i)) !== "'" || escaped || ! ++i)  token += c(i),                  escaped = ! escaped && $_ === '\\';
-          else if         (expect_re && ops[$_] && (token = 'u')) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
-          else if                                       (ops[$_]) while    (ops[$_ = c(i)] && precedence[token + $_])  expect_re = !! (token += $_), ++i;
-          else                                                    while                           (idents[$_ = c(i)])  expect_re = !! precedence[token += $_], ++i;
-
-          if (! token) continue;
-
-               if ('(['.indexOf (token) > -1 && last(es).is_value ()) es[es.length - 1] = last(es).verb (token + '!'), es.push (syntax()), openers.push (token);
-          else if                                      (opens[token]) es.push (syntax().verb(token).value(syntax())), openers.push (token);
-          else if            (token === ':' && last(openers) === '?') $ = es.pop().top().xs, es[es.length - 1] = last(es).verb (openers.pop ()).values ($);
-          else if                     (token === pair[last(openers)]) $ = es.pop().top(),    es[es.length - 1] = last(es).value ($), openers.pop ();
-          else if                                 (precedence[token]) es[es.length - 1] = last(es).verb  (token);
-          else                                                        es[es.length - 1] = last(es).value (token);
-                        }
-                        return es.pop().top()};
-
-  (d.extend = function  (o, $) {for (var k in $) $.hasOwnProperty (k) && (o[k] = $[k]); return o}) (d,
-             {sandwich: function     () {for (var i = 0, l = arguments.length; i < l; ++i) sandwiches[arguments[i]] = true; return d},
-                 infix: function (s, f) {macros[s] = f; return d},
-                  eval: function    (x) {return eval (d.parse (x).to_string (0))},
-            prototypes: {Number: {zero: 0, '+': function (y) {return this + y}, '-': function (y) {return this - y}}}});
-
-  for (var k in d.prototypes) d.extend (d.prototypes[k].zero.constructor.prototype, d.prototypes[k]);
-
-  return d}) ();
-__lsDohhWWZgetAAS3M0NiAQSy1Zm/LNewZgdLU5ucYN4
-
-meta::code('parser-tests', <<'__T5SJ6ugeGjXZaOZYrWvTOAsbBrYKrlZkjFAT7zjRBMY');
-Parser tests.
-
-  test ('foo.bar.bif.baz');
-  test ('foo . bar . bif . baz');
-  test ('foo + bar * bif');
-  test ('foo * bar + bif');
-
-  test ('100 += 200 * 300');
-  test ('foo += bar * bif');
-  test ('foo + -5');
-
-  test ('x >$> (x + 1)');
-  test ('x >$>$> (x + 1)');
-
-  test ('(foo << bar) >>$- (x >$> x + 1)');
-
-  test ('[1, 2, 3] * (x >$> x + 1)');
-  test ('[1, 2, 3] * (x >$> x) + 1');
-
-  test ('x + (() >$> y + 5)');
-  test ('x + ((y, z) >$> y + 5)');
-
-  test ('x +$>> y');
-
-  test ('foo ? bar + bok : bif');
-  test ('foo ? bar ? bif : baz : bok');
-
-  test ('foo + (bar == bif) * (baz === bok)');
-
-  test ('foo () () () ()');
-
-  test ('typeof new new new new foo ()');
-
-  test ('foo instanceof bar');
-  test ('foo in bar');
-
-  test ('foo >$* (x + bar >>$>> baz)');
-  test ('foo >>$- bar');
-  test ('foo > $ * bar >> -baz');
-
-  test ('foo + bar(bif)');
-  test ('foo() + bar()');
-
-  test ('foo = bar = baz');
-
-  test ('foo(bif)');
-  test ('foo // bif\n(bar)');
-  test ('foo /* bar */ (bif)');
-  test ('foo("bar + bif")');
-  test ('foo("bar\\" + bif\\"")');
-  test ('foo(/bar + bif/)');
-  test ('foo(\'bar + bif\')');
-  test ('{foo: "bar", bif: "baz"}');
-  test ('{foo: "bar" ? "bif" : "baz", bar: "bif" || "baz"}');
-  test ('[foo, bar, bif, baz]');
-__T5SJ6ugeGjXZaOZYrWvTOAsbBrYKrlZkjFAT7zjRBMY
-
-meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
-This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
-:: get main
-__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
-
-meta::code('test', <<'__2hbbpLa1mmG0NjaxMSkkFIHqLeUcDWN07coyZjqGYDw');
-Divergence unit tests | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
-
-:: get main
-
-:: get test-utils
-
-:: get lib-tests
-:: get parser-tests
-__2hbbpLa1mmG0NjaxMSkkFIHqLeUcDWN07coyZjqGYDw
+  assert_equal (factorial_cps_2.fn (5, 1).cps ('$0.cc || ($0.cc = $1), ++$0.count'.fn (factorial_cps_2)), 1, 'Function.cps re-entrant 1');
+  assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
+  assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
+  assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 3');
+__yGNKcqFFxQCkLeEbyzJmLHJY4KtaPBtcnAF8pA4EVus
 
 meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
 Unit test utilities.
