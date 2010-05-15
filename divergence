@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__pXVq7ATgYP9/LLfGu1WZuW50Pl2EpjU1NSbQKX6C8uI');
+meta::code('main', <<'__sZ6mt66XEf5suox153qeK3GU5Yb+Px5Ey7HWeiLV3hY');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -272,21 +272,21 @@ var d = (function () {
       compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f (g.apply (this, arguments))}},
        plural:  function  () {return '$1.map ($0)'.fn(this)},
         curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
-        proxy:  function (g) {var f = this.fn(), g = (g || d.id).fn(); return function () {return f.apply.apply (f, g (this, arguments))}},
+        proxy:  function (g) {var f = this.fn(); return g ? function () {return f.apply.apply (f, g.fn() (this, arguments))} : function () {return f.apply (this, arguments)}},
          bind:  function (x) {var f = this.fn(); return d.init (function () {return f.apply (x, arguments)}, {binding: x, original: f})},
          type:  function  () {var f = function () {}, c = this.fn(); d.init.apply (this, [f.prototype].concat (d.arr (arguments))); return function () {return c.apply (new f(), arguments)}},
          tail: '[$_, @_]'.fn(),
-          cps:  function (c) {var cc = [this.fn(), [c = c.fn()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
+          cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__pXVq7ATgYP9/LLfGu1WZuW50Pl2EpjU1NSbQKX6C8uI
+__sZ6mt66XEf5suox153qeK3GU5Yb+Px5Ey7HWeiLV3hY
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__2/2tVFXvg9nxi4HrsJSS4kP85zqdloHHzk3fxagWzrg');
+meta::code('test', <<'__PsS1ftryYB0SA55JDGSvURZMY0k1nyR4/hwgrtn/kSs');
 Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -311,7 +311,7 @@ Function tests.
   assert_equal (factorial_cps.fn (5, 1).cps ('$0'), 120, 'Function.cps 2');
 
   var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
-  assert_equal (sum.fn (10000, 0).cps ('$0'), (10000 * 10001) >> 1, 'Function.cps 3');          // Runs in constant stack space
+  assert_equal (sum.fn (10000, 0).cps (), (10000 * 10001) >> 1, 'Function.cps 3');          // Runs in constant stack space
 
 Re-entrant continuations tests.
 In Scheme, you can emulate /return/ like this:
@@ -338,7 +338,7 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-__2/2tVFXvg9nxi4HrsJSS4kP85zqdloHHzk3fxagWzrg
+__PsS1ftryYB0SA55JDGSvURZMY0k1nyR4/hwgrtn/kSs
 
 meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
 Unit test utilities.
