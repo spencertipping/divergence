@@ -15,7 +15,7 @@ var d = (function () {
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
 
   d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
-                                               lookup: function  () {return '[$1].concat ($0.split(".")).fold("[]")'.fn(this)},
+                                               lookup: function  () {return '$0.split(".").fold("[]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
                                                    fn: function  () {var s = d.macro_expand (this), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
                                                                      return f.fn.apply (f, arguments)}}}) ({}));
@@ -28,7 +28,8 @@ var d = (function () {
                         sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
                            each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
                            grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
-                           fold: function (f) {var x = this[0], f = f.fn(); for (var i = 1, l = this.length; i < l; ++i) x = f (x, this[i]); return x},
+                           fold: function (f) {var xs = d.arr (arguments), f = xs.shift().fn(), x = xs.length ? xs[0] : this[0];
+                                               for (var i = 1, l = xs.length + this.length; i < l; ++i) x = f (x, i < xs.length ? xs[i] : this[i - xs.length]); return x},
                             map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
                              fn: function  () {var xs = this, f = function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))}; return f.fn.apply (f, arguments)}});
 
