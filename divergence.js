@@ -39,6 +39,7 @@ var d = (function () {
   /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
        /@_/g.macro ('Array.prototype.slice.call(arguments)');
       /\$_/g.macro ('this');
+   /@(\w+)/g.macro ('"this." + $1'.fn());
 
   (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('$0.prototype')).push (d.functional_extensions);
 

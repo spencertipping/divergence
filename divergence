@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__sZ6mt66XEf5suox153qeK3GU5Yb+Px5Ey7HWeiLV3hY');
+meta::code('main', <<'__x/aZhmas3WzGFuyMPRwCi8tToqs4UihvgwFUBgvIs/c');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -257,6 +257,7 @@ var d = (function () {
   /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
        /@_/g.macro ('Array.prototype.slice.call(arguments)');
       /\$_/g.macro ('this');
+   /@(\w+)/g.macro ('"this." + $1'.fn());
 
   (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('$0.prototype')).push (d.functional_extensions);
 
@@ -279,14 +280,14 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__sZ6mt66XEf5suox153qeK3GU5Yb+Px5Ey7HWeiLV3hY
+__x/aZhmas3WzGFuyMPRwCi8tToqs4UihvgwFUBgvIs/c
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__PsS1ftryYB0SA55JDGSvURZMY0k1nyR4/hwgrtn/kSs');
+meta::code('test', <<'__SI+Fwl7SAY9HCxGy3w2tF6A0wSeoVF9uxnM+GOzNc3c');
 Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -297,6 +298,8 @@ String tests.
 
   assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
   assert_equal (d.macro_expand ('$_'), 'this', 'String.expand');
+
+  assert_equal ('@foo'.fn().call ({foo: 'bar'}), 'bar', 'Ruby-style this accessors');
 
 Function tests.
 
@@ -338,7 +341,7 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-__PsS1ftryYB0SA55JDGSvURZMY0k1nyR4/hwgrtn/kSs
+__SI+Fwl7SAY9HCxGy3w2tF6A0wSeoVF9uxnM+GOzNc3c
 
 meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
 Unit test utilities.
