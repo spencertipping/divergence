@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__bfSo5L1oCxa7sgeFxkIXT2HS02wygRnAAKdhhvdOu7g');
+meta::code('main', <<'__FRU+fXwNAewxy3rz3Z0WlsKoCh21/3Rf1m2awmLEQtA');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -228,7 +228,7 @@ var d = (function () {
                     aliases:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]))}); return x},
              default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
-                                   macro_expand: function    (s) {d.inline_macros.each (function (m) {s = m(s)}); return s},
+                                   macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
 
@@ -255,12 +255,15 @@ var d = (function () {
   d  (Boolean.prototype, {fn: function () {return this.valueOf () ? d.id.fn.apply (d.fn, arguments) : (1).fn ()}});
   d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
 
-  /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
-       /@_/g.macro ('Array.prototype.slice.call(arguments)');
-      /\$_/g.macro ('this');
-   /@(\w+)/g.macro ('"this." + $1'.fn());
+               /^\./ .macro ('(arguments[0] || this).');
+                /@_/g.macro ('Array.prototype.slice.call(arguments)');
+               /\$_/g.macro ('this');
+           /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
+            /@(\w+)/g.macro ('"this." + $1'.fn());
+  /\{\|([\w,\s]+)\|/g.macro ('"(function(" + $1 + "){return "'.fn());
+              /\|\}/g.macro ('}).fn(arguments)');
 
-  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('$0.prototype')).push (d.functional_extensions);
+  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('.prototype')).push (d.functional_extensions);
 
   (function (fns, ops) {d.keys (fns).each ('$1.alias($0[$1])'.fn (fns));
                         d.keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
@@ -281,14 +284,14 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__bfSo5L1oCxa7sgeFxkIXT2HS02wygRnAAKdhhvdOu7g
+__FRU+fXwNAewxy3rz3Z0WlsKoCh21/3Rf1m2awmLEQtA
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__MKxZ0dxSwwS/LHc5SliQbUyHWUaki8XCV//DrjNAl9E');
+meta::code('test', <<'__l/z/zxKKgkQwaZkMPJ3rnoNqU/q7f8v2BCd3DxR4AQs');
 Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -315,15 +318,19 @@ Function tests.
   assert_equal (add.curry (2) (1, 2) (3, 4, 5), 15,    'Function curry');
   assert_equal (add.curry (5) (1) (2) (3) (4) (5), 15, 'Function curry');
 
+  assert_equal (d.macro_expand ('{|xs| xs[0] + xs[1] |}'), '(function(xs){return  xs[0] + xs[1] }).fn(arguments)', 'Enclosed function macroexpansion');
+  assert_equal ('{|xs| xs[0] + xs[1] + $1 |}'.fn() (1, 2) (3), 6, 'Enclosed functions');
+  assert_equal ('{|xs, y, z| xs[0] + xs[1] + y * z |}'.fn() (1, 2) (3, 4), 15, 'Enclosed functions');
+
   assert_equal ('$0.tail(5)'.cps ('$0'), 5, 'Function.cps');
 
   var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();         // factorial_cps (n, accumulator, continuation)
   assert_equal (factorial_cps.fn (5, 1).cps ('$0'), 120, 'Function.cps 2');
 
   var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
-  assert_equal (sum.fn (10000, 0).cps (), (10000 * 10001) >> 1, 'Function.cps 3');          // Runs in constant stack space
+  assert_equal (sum.fn (10000, 0).cps (), (10000 * 10001) >> 1, 'Function.cps 3');                      // Runs in constant stack space
 
-Re-entrant continuations tests.
+Re-entrant continuation tests.
 In Scheme, you can emulate /return/ like this:
 
   | (call/cc (lambda (return)
@@ -348,7 +355,7 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-__MKxZ0dxSwwS/LHc5SliQbUyHWUaki8XCV//DrjNAl9E
+__l/z/zxKKgkQwaZkMPJ3rnoNqU/q7f8v2BCd3DxR4AQs
 
 meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
 Unit test utilities.
