@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__J7DVS5tuTutlibplFDinw4yoI3yBHPBDzIaFCyshvmQ');
+meta::code('main', <<'__OYRlxMyl1ARRdmE4H665tFqC5AOAOCmZYpiccZPoDBU');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -268,10 +268,12 @@ var d = (function () {
 
   d (d.operators = {},
        {create_aliases: function () {d.map (d.operators, function (_, v) {d.map (v.transforms, function (name, value) {d.map (v.operators, '$0($2).alias($1($3))'.fn (name.fn(), value.fn()))})})},
-                binary: {transforms: {'$0': '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"'},
+                binary: {transforms: {'$0':       '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"',
+                                      '$0 + "_"': '"$_" + $0 + "$0"', '$0 + "_$"': '"{|xs, t| t.fn().apply($_,@_)" + $0 + "xs[0].fn().apply($_,@_)|}.fn($_)"'},
                           operators: {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==',
-                                      and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:','}},
-                 unary: {transforms: {'$0': '$0 + "$1"', '$0 + "$"': '"{|xs| " + $0 + "xs[0].fn().apply($_,@_)|}"'},
+                                      and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:',', lshift: '<<', rshift: '>>', rushift: '>>>'}},
+                 unary: {transforms: {'$0':       '$0 + "$0"', '$0 + "$"': '"{|xs| " + $0 + "xs[0].fn().apply($_,@_)|}"',
+                                      '$0 + "_"': '$0 + "$_"', '$0 + "_$"': '"{|xs, t| " + $0 + "t.fn().apply($_,@_)|}"'},
                           operators: {not:'!', notnot:'!!', complement:'~', negative:'-', positive:'+'}},
            applicative: {transforms: {'$0': '$0'},
                           operators: {'()': '$0($1)', '[]': '$0[$1]'}}}).create_aliases ();
@@ -288,7 +290,7 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__J7DVS5tuTutlibplFDinw4yoI3yBHPBDzIaFCyshvmQ
+__OYRlxMyl1ARRdmE4H665tFqC5AOAOCmZYpiccZPoDBU
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
