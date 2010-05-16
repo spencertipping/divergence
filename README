@@ -24,13 +24,32 @@ Here are the rules for promotion:
   Arrays are homomorphic across function promotion; that is, [f, g].fn() (x) = [f.fn()(x), g.fn()(x)]
   Regular expressions are executed on their arguments; that is, /foo/.fn() (x) = /foo/.exec (x)
 
-The /fn/ function explicitly promotes something, and lets you preload it with parameters. For example:
+The /fn/ function explicitly promotes something and lets you preload it with parameters. For example:
 
   '$0 + $1 + $2'.fn (1, 2) (3)                  // => 6
 
 You can also use /fn/ on regular functions:
 
   (function (x, y, z) {return x + y + z}).fn (1, 2) (3)
+
+Function-promotable things also provide a bunch of common methods so that you don't have to explicitly promote them.
+For example:
+
+  '$0.foo'.compose ('$0.bar')
+
+Flat compose is a method that obeys this contract:
+
+  f.flat_compose (g) (x, y, ...) = f.apply (this, g (x, y, ...))
+
+The idea is that it gives /g/ access to all of f's parameters, not just the first one. This has some nice properties,
+among them that arrays of numbers, somewhat intuitively, form argument permutations under flat-compose:
+
+  'some-function'.flat_compose ([1, 0])         // Reverses the first two arguments and removes the rest
+
+The /d/ object also provides some functions for working with arbitrary objects:
+
+  d.map ({foo: 'bar', bif: 'baz'}, '$0.maps_to($1 + "q")')              // => {foo: 'barq', bif: 'bazq'}
+  d.map ({foo: 'bar', bif: 'baz'}, '/f/.test ($0) && $0.maps_to($1)')   // => {foo: 'bar'}
 
 Inline macro processing.
 When a string is promoted to a function, it is run through macro transformations first. This allows you to use shorthands
@@ -45,7 +64,26 @@ previously-defined ones):
 You can also use aliased functions:
 
   [1, 2, 3].fold ('plus')                       // => 6
-  [0, 1, 2].map ('!!')                          // => [false, true, true]
+  [0, 1, 2].map ('notnot')                      // => [false, true, true]
+
+Full alias lists are defined in d.operators.{binary, unary, assignment, applicative}.
+
+Used with /ctor/, which initializes the prototype of a function, you can end up writing code that looks much like Ruby:
+
+  var point_class = '@x = $0, @y = $1'.ctor ({length: 'Math.sqrt (@x*@x + @y*@y)'.fn()});
+  var p = new point_class (3, 4);
+  p.length()    // => 5
+
+There are also macros available for defining nested functions:
+
+  '$0.map({< $0 + 1 >})'.fn() ([1, 2, 3]                                // => [2, 3, 4]
+  'd.map($0, {|xs, k, v| v.maps_to (k) |})'.fn() ({foo: 'bar'})         // => {bar: 'foo'}
+
+If you use the {|args| ... |} variety, then you should be aware that the arguments to the enclosing function are always
+passed in as the first parameter (otherwise they would be inaccessible). The code this generates looks like this:
+
+  {< $0 + 1 >}                          // => (function(){return arguments[0] + 1})
+  {|foo, bar, bif| bar + bif |}         // => (function(foo, bar, bif){return bar + bif}).fn(arguments)
 
 Delimited continuations.
 JavaScript normally doesn't optimize tail calls, but using CPS to encode tail call optimization isn't difficult. The idea
