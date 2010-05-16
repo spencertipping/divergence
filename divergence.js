@@ -7,7 +7,7 @@ var d = (function () {
                                                                                                   else                          for (var k in $_) o[k] = $_[k]; return o};
   d.init (d, {inline_macros:  [],            id: function    (x) {return x},
                 functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
-                    aliases:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]))}); return x},
+                    aliases:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]) || {})}); return x},
              default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
@@ -15,7 +15,7 @@ var d = (function () {
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
 
   d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
-                                               lookup: function  () {return '$0.split(".").fold("[]", $1)'.fn(this)},
+                                               lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
                                                    fn: function  () {var s = d.macro_expand (this), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
                                                                      return f.fn.apply (f, arguments)}}}) ({}));
@@ -42,24 +42,25 @@ var d = (function () {
                /\$_/g.macro ('this');
            /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
             /@(\w+)/g.macro ('"this." + $1'.fn());
-  /\{\|([\w,\s]+)\|/g.macro ('"(function(" + $1 + "){return "'.fn());
-              /\|\}/g.macro ('}).fn(arguments)');
 
-              /\{\</g.macro ('(function(){return ');
-              /\>\}/g.macro ('})');
+  /\{\|([\w,\s]+)\|/g.macro ('"(function(" + $1 + "){return "'.fn()); /\|\}/g.macro ('}).fn(arguments)');
+              /\{\</g.macro ('(function(){return ');                  /\>\}/g.macro ('})');
 
   (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('.prototype')).push (d.functional_extensions);
 
-  (function (fns, ops) {d.keys (fns).each ('$1.alias($0[$1])'.fn (fns));
-                        d.keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
-                                                         (ops[k] + '$').alias ((k + '$').alias (eval ('(function(f,g){return function(){return f.fn().apply(this,arguments)' + ops[k] +
-                                                                                                                                              'g.fn().apply(this,arguments)}})')))})}) (
-    {'()':'$0($1)', '[]':'$0[$1]', '!':'!$0', '!!':'!!$0', '~':'~$0'},
-    {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==', and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:','});
-
+  d (d.operators = {},
+       {create_aliases: function () {d.map (d.operators, function (_, v) {d.map (v.transforms, function (name, value) {d.map (v.operators, '$0($2).alias($1($3))'.fn (name.fn(), value.fn()))})})},
+                binary: {transforms: {'$0': '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"'},
+                          operators: {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==',
+                                      and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:','}},
+                 unary: {transforms: {'$0': '$0 + "$1"', '$0 + "$"': '"{|xs| " + $0 + "xs[0].fn().apply($_,@_)|}"'},
+                          operators: {not:'!', notnot:'!!', complement:'~', negative:'-', positive:'+'}},
+           applicative: {transforms: {'$0': '$0'},
+                          operators: {'()': '$0($1)', '[]': '$0[$1]'}}}).create_aliases ();
   d.functions ({
     prototype:  function  () {var f = this.fn(), g = function () {f.apply (this, arguments)}; d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
       compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f (g.apply (this, arguments))}},
+ flat_compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f.apply (this, g.apply (this, arguments))}},
        plural:  function  () {return '$1.map ($0)'.fn(this)},
         curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
         proxy:  function (g) {var f = this.fn(); return g ? function () {return f.apply.apply (f, g.fn() (this, arguments))} : function () {return f.apply (this, arguments)}},
