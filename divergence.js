@@ -17,8 +17,10 @@ var d = (function () {
   d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
                                                lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
-                                                   fn: function  () {var s = d.macro_expand (this).toString(), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
-                                                                     return f.fn.apply (f, arguments)}}}) ({}));
+                                                 fail: function  () {throw new Error (this.toString())},
+                                                   fn: function  () {try {var s = d.macro_expand (this).toString(), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
+                                                                          return f.fn.apply (f, arguments)}
+                                                                     catch (e) {('Failed to eval ' + this.toString()).fail()}}}}) ({}));
 
   d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
                           macro: function (f) {return d.macro (this, f)},
