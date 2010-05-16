@@ -50,10 +50,12 @@ var d = (function () {
 
   d (d.operators = {},
        {create_aliases: function () {d.map (d.operators, function (_, v) {d.map (v.transforms, function (name, value) {d.map (v.operators, '$0($2).alias($1($3))'.fn (name.fn(), value.fn()))})})},
-                binary: {transforms: {'$0': '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"'},
+                binary: {transforms: {'$0':       '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"',
+                                      '$0 + "_"': '"$_" + $0 + "$0"', '$0 + "_$"': '"{|xs, t| t.fn().apply($_,@_)" + $0 + "xs[0].fn().apply($_,@_)|}.fn($_)"'},
                           operators: {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==',
-                                      and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:','}},
-                 unary: {transforms: {'$0': '$0 + "$1"', '$0 + "$"': '"{|xs| " + $0 + "xs[0].fn().apply($_,@_)|}"'},
+                                      and:'&&', or:'||', xor:'^', bitand:'&', bitor:'|', then:',', lshift: '<<', rshift: '>>', rushift: '>>>'}},
+                 unary: {transforms: {'$0':       '$0 + "$0"', '$0 + "$"': '"{|xs| " + $0 + "xs[0].fn().apply($_,@_)|}"',
+                                      '$0 + "_"': '$0 + "$_"', '$0 + "_$"': '"{|xs, t| " + $0 + "t.fn().apply($_,@_)|}"'},
                           operators: {not:'!', notnot:'!!', complement:'~', negative:'-', positive:'+'}},
            applicative: {transforms: {'$0': '$0'},
                           operators: {'()': '$0($1)', '[]': '$0[$1]'}}}).create_aliases ();
