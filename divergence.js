@@ -19,7 +19,7 @@ var d = (function () {
                                                lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
                                                  fail: function  () {throw new Error (this.toString())},
-                                                   fn: function  () {var s = d.trace (d.macro_expand (this)), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
+                                                   fn: function  () {var s = d.macro_expand (this), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
                                                                      return f.fn.apply (f, arguments)}}}) ({}));
 
   d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
