@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__AjOtece0IbKU5jksfhoucqsbX5WJz8ZRa4JDI/d3a5c');
+meta::code('main', <<'__xrdE9mk87Y1c9IjvWw9AU34wFMmUseGwIdaswlEOrvA');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -280,26 +280,26 @@ var d = (function () {
            applicative: {transforms: {'$0': '$0'},
                           operators: {'()': '$0($1)', '[]': '$0[$1]'}}}).create_aliases ();
   d.functions ({
-    prototype:  function  () {var f = this.fn(), g = function () {f.apply (this, arguments)}; d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
       compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f (g.apply (this, arguments))}},
  flat_compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f.apply (this, g.apply (this, arguments))}},
        plural:  function  () {return '$1.map ($0)'.fn(this)},
         curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
         proxy:  function (g) {var f = this.fn(); return g ? function () {return f.apply.apply (f, g.fn() (this, arguments))} : function () {return f.apply (this, arguments)}},
          bind:  function (x) {var f = this.fn(); return d.init (function () {return f.apply (x, arguments)}, {binding: x, original: f})},
-         type:  function  () {var f = function () {}, c = this.fn(); d.init.apply (this, [f.prototype].concat (d.arr (arguments))); return function () {return c.apply (new f(), arguments)}},
+         type:  function  () {var f = function () {}; f = f.ctor.apply (f, arguments); return function () {return c.apply (new f(), arguments)}},
+         ctor:  function  () {var f = this.fn(), g = function () {f.apply (this, arguments)}; d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
          tail: '[$_, @_]'.fn(),
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__AjOtece0IbKU5jksfhoucqsbX5WJz8ZRa4JDI/d3a5c
+__xrdE9mk87Y1c9IjvWw9AU34wFMmUseGwIdaswlEOrvA
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__IvcxS5TKGg7jgwvXmfmgMM5nsrE0gqW/p6xJ1sXTQ5o');
+meta::code('test', <<'__7BuQ+dcUN0z6Unw8zk1vkzmr7qtvTTD5+rx37W2f/WY');
 Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -340,6 +340,10 @@ Function tests.
   var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
   assert_equal (sum.fn (10000, 0).cps (), (10000 * 10001) >> 1, 'Function.cps 3');                      // Runs in constant stack space
 
+  var c = '@foo = "bar"'.fn().ctor ({get_foo: '@foo'.fn()});
+  var i = new c ();
+  assert_equal (i.get_foo(), 'bar', 'Function.ctor');
+
 Re-entrant continuation tests.
 In Scheme, you can emulate /return/ like this:
 
@@ -365,7 +369,7 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-__IvcxS5TKGg7jgwvXmfmgMM5nsrE0gqW/p6xJ1sXTQ5o
+__7BuQ+dcUN0z6Unw8zk1vkzmr7qtvTTD5+rx37W2f/WY
 
 meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
 Unit test utilities.
