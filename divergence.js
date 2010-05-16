@@ -12,15 +12,15 @@ var d = (function () {
       functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
-                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
+                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d},
+                                          trace: function    (x) {d.tracer && d.tracer (x); return x}});
 
   d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
                                                lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
                                                  fail: function  () {throw new Error (this.toString())},
-                                                   fn: function  () {try {var s = d.macro_expand (this).toString(), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
-                                                                          return f.fn.apply (f, arguments)}
-                                                                     catch (e) {('Failed to eval ' + this.toString()).fail()}}}}) ({}));
+                                                   fn: function  () {var s = d.trace (d.macro_expand (this)), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
+                                                                     return f.fn.apply (f, arguments)}}}) ({}));
 
   d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
                           macro: function (f) {return d.macro (this, f)},

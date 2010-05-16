@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__ppQmKRl6NhT93seMxNpnEZK262CxPirJVyowC7Npt7A');
+meta::code('main', <<'__S6qJcP64BBKTwcUW+QPo8DnfSEboEvIv5yP8UkvtkTA');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -230,15 +230,15 @@ var d = (function () {
       functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
-                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
+                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d},
+                                          trace: function    (x) {d.tracer && d.tracer (x); return x}});
 
   d (String.prototype, (function (c) {return {maps_to: function (v) {var result = {}; result[this] = v; return result},
                                                lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
                                                 alias: function (f) {return d.alias (this, f)},
                                                  fail: function  () {throw new Error (this.toString())},
-                                                   fn: function  () {try {var s = d.macro_expand (this).toString(), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
-                                                                          return f.fn.apply (f, arguments)}
-                                                                     catch (e) {('Failed to eval ' + this.toString()).fail()}}}}) ({}));
+                                                   fn: function  () {var s = d.trace (d.macro_expand (this)), f = d.aliases[s] || c[s] || (c[s] = eval ('(function(){return ' + s + '})'));
+                                                                     return f.fn.apply (f, arguments)}}}) ({}));
 
   d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
                           macro: function (f) {return d.macro (this, f)},
@@ -294,7 +294,7 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__ppQmKRl6NhT93seMxNpnEZK262CxPirJVyowC7Npt7A
+__S6qJcP64BBKTwcUW+QPo8DnfSEboEvIv5yP8UkvtkTA
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
