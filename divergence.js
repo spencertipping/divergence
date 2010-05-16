@@ -10,7 +10,7 @@ var d = (function () {
                     aliases:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]))}); return x},
              default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
       functional_extensions:  {},     functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
-                                   macro_expand: function    (s) {d.inline_macros.each (function (m) {s = m(s)}); return s},
+                                   macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); return d}});
 
@@ -37,12 +37,18 @@ var d = (function () {
   d  (Boolean.prototype, {fn: function () {return this.valueOf () ? d.id.fn.apply (d.fn, arguments) : (1).fn ()}});
   d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
 
-  /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
-       /@_/g.macro ('Array.prototype.slice.call(arguments)');
-      /\$_/g.macro ('this');
-   /@(\w+)/g.macro ('"this." + $1'.fn());
+               /^\./ .macro ('(arguments[0] || this).');
+                /@_/g.macro ('Array.prototype.slice.call(arguments)');
+               /\$_/g.macro ('this');
+           /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
+            /@(\w+)/g.macro ('"this." + $1'.fn());
+  /\{\|([\w,\s]+)\|/g.macro ('"(function(" + $1 + "){return "'.fn());
+              /\|\}/g.macro ('}).fn(arguments)');
 
-  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('$0.prototype')).push (d.functional_extensions);
+              /\{\</g.macro ('(function(){return ');
+              /\>\}/g.macro ('})');
+
+  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('.prototype')).push (d.functional_extensions);
 
   (function (fns, ops) {d.keys (fns).each ('$1.alias($0[$1])'.fn (fns));
                         d.keys (ops).each (function (k) { ops[k]       .alias ( k       .alias (eval ('(function(x,y){return x'                                              + ops[k] + 'y})')));
