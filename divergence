@@ -373,15 +373,13 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
 __7BuQ+dcUN0z6Unw8zk1vkzmr7qtvTTD5+rx37W2f/WY
 
-meta::code('test-utils', <<'__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY');
+meta::code('test-utils', <<'__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc');
 Unit test utilities.
 
   var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
   var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
-
   var trace        = function (x) {print (x); return x};
-  var test         = function (s) {print (s + '  =>  ' + d.parse (s).inspect (20))};
-__0gq0joB9agsAIRLVGmvu4gqsIlTHY1DayHRb4DOA9gY
+__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
