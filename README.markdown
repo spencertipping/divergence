@@ -4,8 +4,7 @@ Divergence is a JavaScript library designed to manipulate functions. It provides
 2. Inline macro processing
 3. Flat-stack tail calls (in delimited CPS mode)
 
-# Function promotion.
-
+# Function promotion
 
 JavaScript's function syntax is quite verbose, so Divergence allows you to use other literals in place of functions. You can use strings, numbers, regular expressions, booleans, or arrays anywhere you would normally use a function:
 
@@ -50,7 +49,7 @@ The `d` object also provides some functions for working with arbitrary objects:
     d.map ({foo: 'bar', bif: 'baz'}, '$0.maps_to($1 + "q")')              // => {foo: 'barq', bif: 'bazq'}
     d.map ({foo: 'bar', bif: 'baz'}, '/f/.test ($0) && $0.maps_to($1)')   // => {foo: 'bar'}
 
-# Inline macro processing.
+# Inline macro processing
 
 When a string is promoted to a function, it is run through macro transformations first. This allows you to use shorthands such as `$_` for `this`, `@_` for `Array.prototype.slice.call(arguments)`, `$n` for `arguments[n]`, and `@foo` for `this.foo`. You can add new macros by specifying a regular expression with an expander function (new macros are processed after all previously-defined ones):
 
@@ -81,7 +80,7 @@ The code this generates looks like this:
     {< $0 + 1 >}                                // => (function(){return arguments[0] + 1})
     {|k, v| v.maps_to(k) |}                     // => (function(k, v){return v.maps_to(k)})
 
-# Delimited continuations.
+# Delimited continuations
 
 JavaScript normally doesn't optimize tail calls, but using CPS to encode tail call optimization isn't difficult. The idea is that rather than winding up the call stack with recursion:
 
