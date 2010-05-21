@@ -57,13 +57,6 @@ When a string is promoted to a function, it is run through macro transformations
 
     [1, 2, 3].map ('sqr($0)')                     // => [1, 4, 9]
 
-You can also use aliased functions:
-
-    [1, 2, 3].fold ('plus')                       // => 6
-    [0, 1, 2].map ('notnot')                      // => [false, true, true]
-
-Full alias lists are defined in `d.operators.{binary, unary, assignment, applicative}`.
-
 Used with `ctor`, which initializes the prototype of a function, you can end up writing code that looks much like Ruby:
 
     var point_class = '@x = $0, @y = $1'.ctor ({length: 'Math.sqrt (@x*@x + @y*@y)'.fn()});
