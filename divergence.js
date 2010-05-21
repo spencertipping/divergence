@@ -52,8 +52,8 @@ var d = (function () {
 
   d (d.operators = {},
        {create_aliases: function () {d.map (d.operators, function (_, v) {d.map (v.transforms, function (name, value) {d.map (v.operators, '$0($2).alias($1($3))'.fn (name.fn(), value.fn()))})})},
-                binary: {transforms: {'$0':       '"$0" + $0 + "$1"', '$0 + "$"': '"{|xs| xs[0].fn().apply($_,@_)" + $0 + "xs[1].fn().apply($_,@_)|}"',
-                                      '$0 + "_"': '"$_" + $0 + "$0"', '$0 + "_$"': '"{|xs, t| t.fn().apply($_,@_)" + $0 + "xs[0].fn().apply($_,@_)|}.fn($_)"'},
+                binary: {transforms: {'$0':       '"$0" + $0 + "$1"', '$0 +  "$"': '"{|x, y| x.apply($_,@_)" + $0 + "y.apply($_,@_)|}.fn($0.fn(), $1.fn())"',
+                                      '$0 + "_"': '"$_" + $0 + "$0"', '$0 + "_$"': '"{|t, x| t.apply($_,@_)" + $0 + "x.apply($_,@_)|}.fn($_.fn(), $0.fn())"'},
                           operators: {plus:'+', minus:'-', times:'*', over:'/', modulo:'%', lt:'<', gt:'>', le:'<=', ge:'>=', eq:'==', ne:'!=', req:'===', rne:'!==', and:'&&', or:'||', xor:'^',
                                       bitand:'&', bitor:'|', then:',', lshift: '<<', rshift: '>>', rushift: '>>>'}},
                  unary: {transforms: {'$0': '$0 + "($0 || $_)"', '$0 + "_fn"': '"{|f| " + $0 + "f.fn.apply($_,@_)|}.fn(($0 || $_).fn())"'},
@@ -62,6 +62,7 @@ var d = (function () {
                           operators: {plus_eq:'+=', minus_eq:'-=', times_eq:'*=', over_eq:'/=', bitand_eq:'&=', bitor_eq:'|=', bitxor_eq:'^=', lshift_eq:'<<=', rshift_eq:'>>=', rushift_eq:'>>>='}},
            applicative: {transforms: {'$0': '$0'},
                           operators: {'()': '$0($1)', '[]': '$0[$1]'}}}).create_aliases ();
+
   d.functions ({
       compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f (g.apply (this, arguments))}},
  flat_compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f.apply (this, g.apply (this, arguments))}},
