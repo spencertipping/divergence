@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__pM6G39PrflviitQF4t2eUWWddknkekSwgg4W1vROwtI');
+meta::code('main', <<'__zn6vIqIDocVXvGMo1VxeHs7O+Pe3MKtRGbva2kzthXI');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -231,7 +231,7 @@ var d = (function () {
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); c = {}; return d},
-                                          trace: function    (x) {d.tracer && d.tracer ([x].concat (d.arr (arguments)).join (', ')); return x}});
+                                          trace: function    (x) {d.tracer && d.tracer (d.arr (arguments)).join (', ')); return x}});
 
   d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
                          lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
@@ -279,7 +279,7 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__pM6G39PrflviitQF4t2eUWWddknkekSwgg4W1vROwtI
+__zn6vIqIDocVXvGMo1VxeHs7O+Pe3MKtRGbva2kzthXI
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
