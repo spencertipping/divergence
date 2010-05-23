@@ -215,14 +215,14 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__+MecTJMYy6ugvuoUV4r2AUu6GjkxwGgPBOGcvO0YtlE');
+meta::code('main', <<'__R+tMuWKuMSlvSrxMtIpBB58+9eqR9NTf91JURX23N2U');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 var d = (function () {
   var c = {}, d = function () {return d[d.default_action].apply (this, arguments)};
-  d.init = function (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
-                                                                                                  else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
+  d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
+                                                                                                         else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
   d.init (d, {inline_macros:  [],            id: function    (x) {return x},
                 functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
       functional_extensions:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]) || {})}); return x},
@@ -279,7 +279,7 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__+MecTJMYy6ugvuoUV4r2AUu6GjkxwGgPBOGcvO0YtlE
+__R+tMuWKuMSlvSrxMtIpBB58+9eqR9NTf91JURX23N2U
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.

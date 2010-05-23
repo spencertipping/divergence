@@ -3,8 +3,8 @@
 
 var d = (function () {
   var c = {}, d = function () {return d[d.default_action].apply (this, arguments)};
-  d.init = function (o) {for (var i = 1, l = arguments.length, $_; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
-                                                                                                  else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
+  d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
+                                                                                                         else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
   d.init (d, {inline_macros:  [],            id: function    (x) {return x},
                 functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
       functional_extensions:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]) || {})}); return x},
