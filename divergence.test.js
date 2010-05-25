@@ -38,7 +38,7 @@ var d = (function () {
                              fn: function  () {var xs = this, f = function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))}; return f.fn.apply (f, arguments)}});
 
   d (Function.prototype, {fn: function () {var f = this, xs = d.arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (d.arr (arguments)))} : f}});
-  d  (Boolean.prototype, {fn: function () {return this.valueOf () ? d.id.fn.apply (d.fn, arguments) : (1).fn ()}});
+  d  (Boolean.prototype, {fn: function () {return Number.prototype.fn.apply (1 - this.valueOf(), arguments)}});
   d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
 
                /^\./ .macro ('(arguments[0] || this).');
@@ -83,6 +83,20 @@ var d = (function () {
   assert_equal ([1, 2, 3].fold ('$0 + $1', 4, 5, 6), 21, 'Variadic Array.fold with 3');
   assert_equal ([1, 2, 3].fold ('$0 + $1', 4),       10, 'Variadic Array.fold');
   assert_equal ([1].fold ('$0 + $1'),                 1, 'Unary Array.fold');
+
+// Number / boolean tests.
+
+  assert_equal ((0).fn() (1, 2, 3), 1, '0.fn');
+  assert_equal ((1).fn() (1, 2, 3), 2, '1.fn');
+
+  assert_equal ((0).fn(1) (2, 3, 4), 1, '0.fn(k)');
+  assert_equal ((1).fn(1, 2) (3, 4, 5), 2, '1.fn(k)');
+
+  assert_equal (true.fn()  (1, 2, 3), 1, 'true.fn');
+  assert_equal (false.fn() (1, 2, 3), 2, 'false.fn');
+
+  assert_equal (true.fn(5) (1, 2, 3), 5, 'true.fn(k)');
+  assert_equal (false.fn(5, 6) (1, 2, 3), 6, 'false.fn(k)');
 
 // Function tests.
 

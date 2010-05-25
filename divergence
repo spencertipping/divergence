@@ -215,7 +215,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__R+tMuWKuMSlvSrxMtIpBB58+9eqR9NTf91JURX23N2U');
+meta::code('main', <<'__V2OUmaOPU/DUned8h0H+TGh+AnsTM2CbYwqVqC/yizo');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -253,7 +253,7 @@ var d = (function () {
                              fn: function  () {var xs = this, f = function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))}; return f.fn.apply (f, arguments)}});
 
   d (Function.prototype, {fn: function () {var f = this, xs = d.arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (d.arr (arguments)))} : f}});
-  d  (Boolean.prototype, {fn: function () {return this.valueOf () ? d.id.fn.apply (d.fn, arguments) : (1).fn ()}});
+  d  (Boolean.prototype, {fn: function () {return Number.prototype.fn.apply (1 - this.valueOf(), arguments)}});
   d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
 
                /^\./ .macro ('(arguments[0] || this).');
@@ -279,14 +279,14 @@ var d = (function () {
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
 
   return d}) ();
-__R+tMuWKuMSlvSrxMtIpBB58+9eqR9NTf91JURX23N2U
+__V2OUmaOPU/DUned8h0H+TGh+AnsTM2CbYwqVqC/yizo
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
 :: get main
 __UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
 
-meta::code('test', <<'__f1iBQwzAsIyzVt5EK8K1qdCjucutSuRYQV2M79ipV8k');
+meta::code('test', <<'__KolNgHq/SM1HKuxj/5k0D8Os1RT6ZjJkexixh124HJ0');
 Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -305,6 +305,20 @@ Array method tests.
   assert_equal ([1, 2, 3].fold ('$0 + $1', 4, 5, 6), 21, 'Variadic Array.fold with 3');
   assert_equal ([1, 2, 3].fold ('$0 + $1', 4),       10, 'Variadic Array.fold');
   assert_equal ([1].fold ('$0 + $1'),                 1, 'Unary Array.fold');
+
+Number / boolean tests.
+
+  assert_equal ((0).fn() (1, 2, 3), 1, '0.fn');
+  assert_equal ((1).fn() (1, 2, 3), 2, '1.fn');
+
+  assert_equal ((0).fn(1) (2, 3, 4), 1, '0.fn(k)');
+  assert_equal ((1).fn(1, 2) (3, 4, 5), 2, '1.fn(k)');
+
+  assert_equal (true.fn()  (1, 2, 3), 1, 'true.fn');
+  assert_equal (false.fn() (1, 2, 3), 2, 'false.fn');
+
+  assert_equal (true.fn(5) (1, 2, 3), 5, 'true.fn(k)');
+  assert_equal (false.fn(5, 6) (1, 2, 3), 6, 'false.fn(k)');
 
 Function tests.
 
@@ -356,7 +370,7 @@ about code readability apply even though this isn't Scheme):
   assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
   assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
   assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-__f1iBQwzAsIyzVt5EK8K1qdCjucutSuRYQV2M79ipV8k
+__KolNgHq/SM1HKuxj/5k0D8Os1RT6ZjJkexixh124HJ0
 
 meta::code('test-utils', <<'__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc');
 Unit test utilities.
