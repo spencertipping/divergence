@@ -4,6 +4,8 @@ Divergence is a JavaScript library designed to manipulate functions. It provides
 2. Inline macro processing
 3. Flat-stack tail calls (in delimited CPS mode)
 
+I'm writing up a guide that provides more complete documentation; see <http://github.com/spencertipping/divergence-guide>.
+
 # Function promotion
 
 JavaScript's function syntax is quite verbose, so Divergence allows you to use other literals in place of functions. You can use strings, numbers, regular expressions, booleans, or arrays anywhere you would normally use a function:
