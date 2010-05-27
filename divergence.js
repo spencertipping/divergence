@@ -2,7 +2,7 @@
 // Licensed under the terms of the MIT source code license
 
 var d = (function () {
-  var c = {}, d = function () {return d[d.default_action].apply (this, arguments)};
+  var c = {}, d = function () {return d[d.default_action].apply (this, arguments)}, gensym_count = 0;
   d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
                                                                                                          else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
   d.init (d, {inline_macros:  [],            id: function    (x) {return x},
@@ -11,6 +11,7 @@ var d = (function () {
              default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
                                       functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
                                      functional: function     () {d.arr (arguments).each (function (f) {d.functionals.push (d.init (f, d.functional_extensions))}); return this},
+                                         gensym: function    (s) {return 'gensym_' + (s || '') + (++gensym_count).toString(36)},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           alias: function (s, f) {d.aliases[s] = f.fn(); return d},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); c = {}; return d},
