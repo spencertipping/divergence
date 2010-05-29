@@ -82,6 +82,8 @@ var d = (function () {
 
   print (d.gensym ('foo'));
 
+  d.init ({}, {toString: function () {return 'bar'}});
+
 // Array method tests.
 
   assert_equal ([1, 2, 3].fold ('$0 + $1', 4, 5, 6), 21, 'Variadic Array.fold with 3');
