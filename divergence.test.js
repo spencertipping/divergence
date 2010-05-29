@@ -16,13 +16,11 @@ var d = (function () {
                                      functional: function     () {d.arr (arguments).each (function (f) {d.functionals.push (d.init (f, d.functional_extensions))}); return this},
                                          gensym: function    (s) {return 'gensym_' + (s || '') + (++gensym_count).toString(36)},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
-                                          alias: function (s, f) {d.aliases[s] = f.fn(); return d},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); c = {}; return d},
                                           trace: function    (x) {d.tracer && d.tracer (d.arr (arguments).join (', ')); return x}});
 
   d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
                          lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
-                          alias: function (f) {return d.alias (this, f)},
                            fail: function  () {throw new Error (this.toString())},
                              fn: function  () {var s = this.toString(), f = c[s] || (c[s] = eval ('(function(){return ' + d.macro_expand(s) + '})')); return f.fn.apply (f, arguments)}});
 
