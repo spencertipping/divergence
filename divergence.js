@@ -58,6 +58,7 @@ var d = (function () {
          type:  function  () {var f = function () {}, c = this.fn(); f = f.ctor.apply (f, arguments); return function () {return c.apply (new f(), arguments)}},
          ctor:  function  () {var g = function () {f.apply (this, arguments)}, f = g.original = this.fn(); d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
          tail: '[$_.fn(), arguments]'.fn(),
-          cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])}});
+          cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])},
+          fix:  function  () {var f = this.fn(); return f (function () {return f.fix().apply (this, arguments)})}});
 
   return d}) ();
