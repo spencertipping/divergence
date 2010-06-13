@@ -229,16 +229,57 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__OubR5t6IW6A98rj18/auUvOlj5UjST8xJTuqvnjRJmE');
+meta::code('main', <<'__DxJ9kqCUmdSTvk4hza0E+JmGSRZ+zBKTexMEy4fI5YU');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
-See the Divergence guide (http://github.com/spencertipping/divergence-guide) for documentation about the functions here.
+var d = (function (eval_in_global_scope) {
+  var original_d = d, d = function () {return d.fn.apply (this, arguments)}, cache = {}, own = Object.prototype.hasOwnProperty, slice = Array.prototype.slice;
+
+  d.init = function (o) {for (var i = 1, l = arguments.length, q = null; q = arguments[i], i < l; ++i) if (q.call && q.call.apply) o = q.call (o) || o;
+                                                                                                       else                        for (var k in q) own.call (q, k) && (o[k] = q[k]); return o};
+  d.init (d, {i: function (x) {return x}, k: function (x) {return function () {return x}}}, {
+    gensym: (function (count) {return function (s) {return '_g' + (s || '') + (++count).toString(36) + '_'}}) (0),  hash: function (k, v) {var r = {}; r[k] = v; return r},
+     trace: function (x) {d.tracer && d.tracer (slice.call (arguments).join (', ')); return x},                     fail: function    (s) {throw new Error (s)},
+
+        fn: d.init (function (x, e) {var c = x, f = d.fn[x === null || x === undefined ?     'null' :
+                                                      (c = x.constructor) === Function ? 'function' : c === String ? 'string' : c === Number ? 'number' :
+                                                                        c ===  Boolean ?  'boolean' : c ===  Array ?  'array' : c === Object ? 'object' : 'default'] (x, e);
+                                     return f.compose ? f : d.init (f, d.fn.methods)},
+
+                    {'string': function  (s, e) {if (! e) return cache[s] || (cache[s] = eval_in_global_scope ('(function(){return ' + d.macro.expand (s) + '})'))
+                                                     else {var ks = [], vs = []; for (var k in e) own.call (e, k) && ks.push (k) && vs.push (e[k]);
+                                                           s = '(function(' + ks.join(',') + '){return function() {' + d.macro.expand (s) + '}})';
+                                                           return (cache[s] || (cache[s] = eval_in_global_scope (s))).apply (this, vs)}},
+
+                      'array': function (xs, e) {return function () {var ys = []; for (var i = 0, l = xs.length; i < l; ++i) ys.push (d(xs[i]).apply (this, arguments)); return ys}},
+                     'object': function  (o, e) {return function () {var  r = {}; for (var k in o) own.call (o, k) && r[k] = d(o[k]).apply (this, arguments); return r}},
+                     'regexp': function  (r)    {return r.exec.bind (r)},                    'boolean': function (b) {return b ? d.i : d.k},
+                     'number': function  (n)    {return function () {return arguments[n]}}, 'function': d.i,
+                       'null': d.k (d.k),                                                    'default': function (x) {return x.fn()},
+                     methods : {}}),
+
+     macro: d.init (function (p, r) {var l = d.macro.list; p.constructor === RegExp ? l.push (function (s) {return s.replace (p, r)}) : l.push.apply (l, arguments); cache = {}; return d},
+                    {list: [], expand: function (s) {for (var ms = d.macro.list, i = ms.length - 1; i >= 0; --i) s = ms[i](s); return s}})});
+
+  d.macro (/\{\</g, '(function(){return ').macro (/\{\|([\w,\s]+)\|/g, 'function($1)({return ').macro (/[\>\|]\}/g, '})').macro (/@\(/g, '.apply(').macro (/@@/g, 'arguments').
+    macro (/@(\w+)/g, 'this.$1').macro (/\$(\d+)/g, 'arguments[$1]').macro (/\$_/g, 'this').macro (/@_/g, 'Array.prototype.slice.call(arguments)').macro (/^\./, '($0 || $_).');
+
+  (function (c) {d.init (d.fn.methods,
+    {right: d('{|f, g| d({< f.call($_, g@($_, @@)) >}) |} ($_, d($0))', {d: d}), left: d('d($0).right($_)', {d: d})},
+    {flat_right: c('f@($_, g@($_, @@))').compose (d),  flat_left: d('d($0).flat_right($_)', {d: d}),  given: d('@curry(2)@($_, @@)'),  bound_to: c('f@(g, @@)'),
+          clone: c('f@($_, @@)'),                        curried: d('$0 > 1 ? {|f, n| d({< {|xs| f.curried(n - 1)@($_, xs.concat(@_)) |} (@_) >}) |} ($_, $0) : $_', {d: d})},
+    {for_arrays: function () {var f = this; return d (function (xs) {var ys = []; for (var i = 0, l = xs.length; i < l; ++i) ys.push (f.call (this, xs[i])); return ys})},
+     for_values: function () {var f = this; return d (function  (o) {var  r = {}; for (var k in o) own.call (o, k) && r[k] = f.call (this, o[k]); return r})},
+       for_keys: function () {var f = this; return d (function  (o) {var  r = {}; for (var k in o) own.call (o, k) && r[f.call (this, k)] = o[k]; return r})},
+
+
+    }) (function (pattern) {return d ('{|f, g| d({< ' + pattern + ' >}) |} ($_, $0)', {d: d})});
+
+  return d}) (function () {return eval (arguments[0])});
 
 var d = (function (eval_in_global_scope) {
   var c = {}, d = function () {return d[d.default_action].apply (this, arguments)}, gensym_count = 0;
-  d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i) if ($_.call && $_.call.apply) $_.call (o);
-                                                                                                         else                          for (var k in $_) $_.hasOwnProperty (k) && (o[k] = $_[k]); return o};
   d.init (d, {inline_macros:  [],            id: function    (x) {return x},
                 functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
       functional_extensions:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]) || {})}); return x},
@@ -297,7 +338,7 @@ var d = (function (eval_in_global_scope) {
           fix:  function  () {var f = this.fn(); return f (function () {return f.fix().apply (this, arguments)})}});
 
   return d}) (function () {return eval (arguments[0])});
-__OubR5t6IW6A98rj18/auUvOlj5UjST8xJTuqvnjRJmE
+__DxJ9kqCUmdSTvk4hza0E+JmGSRZ+zBKTexMEy4fI5YU
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
