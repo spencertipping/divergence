@@ -401,13 +401,15 @@ Fix tests.
   assert_equal (factorial_fix (5), 120);
 __8d0FHfXtphoAXLmhYqlZuF+CRLENP8rNW4qPAuc3MzU
 
-meta::code('test-utils', <<'__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc');
+meta::code('test-utils', <<'__DX/7H4+AhLJiuTjtYC5rRckdZSWeLcLxczrVLn3CcQc');
 Unit test utilities.
+
+  this.print || (print = require('sys').print);
 
   var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
   var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
   var trace        = function (x) {print (x); return x};
-__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc
+__DX/7H4+AhLJiuTjtYC5rRckdZSWeLcLxczrVLn3CcQc
 
 meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
 shell
@@ -465,10 +467,11 @@ meta::function('code', <<'__NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA');
 join "\n\n", map preprocess(retrieve("code::$_")), @_;
 __NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA
 
-meta::function('compile', <<'__fS4SFKwDwlQRAPgdkfOItg4KJJn5c4BwZzQkiAe8Kvc');
+meta::function('compile', <<'__sRdDvIBWZmYdwKThIyYsltLUSZlDv8G2D+kkmCLvxH4');
 my $name = name();
 file::write("$name.js", unlit('main'));
-__fS4SFKwDwlQRAPgdkfOItg4KJJn5c4BwZzQkiAe8Kvc
+file::write("$name.test.js", unlit('test'));
+__sRdDvIBWZmYdwKThIyYsltLUSZlDv8G2D+kkmCLvxH4
 
 meta::function('cp', <<'__yn1SQkcEk6o+gnuCy3QGVFtQb2piaCoUdJPGUkLjpD4');
 my ($from, $to) = @_;
