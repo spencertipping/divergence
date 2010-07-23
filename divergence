@@ -337,11 +337,11 @@ __3c6177256de0fddb721f534c3ad8c0ee
 
 meta::data('name', 'divergence');
 meta::data('output-dir', '/tmp');
-meta::data('pdf-output-file', '/tmp/divergence.9e2b37f74c4f40f02dfc172889a0a2b8/document.pdf');
+meta::data('pdf-output-file', '/tmp/divergence.1caaecd3bb5c74fd7a3d6704b8ac7900/document.pdf');
 meta::data('pdf-reader', '/usr/bin/evince');
 meta::data('pdftex-command', 'pdflatex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
 meta::data('quiet', '1');
-meta::data('source-directory', '/tmp/src');
+meta::data('source-directory', './src');
 meta::data('table-of-contents', '1');
 meta::data('tex-command', 'latex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
 meta::data('watching', '0');
