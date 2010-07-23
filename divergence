@@ -1,494 +1,363 @@
 #!/usr/bin/perl
 
-use File::Temp  'tempfile';
-use Carp        'carp';
-use Digest::SHA 'sha256_base64';
+=head1 Self-modifying Perl script
 
-$|++;
+=head2 Original implementation by Spencer Tipping L<http://spencertipping.com>
 
-my %data;
-my %transient;
-my %externalized_functions;
-my @data_types;
-my @script_args;
+The prototype for this script is licensed under the terms of the MIT source code license.
+However, this script in particular may be under different licensing terms. To find out how
+this script is licensed, please contact whoever sent it to you. Alternatively, you may
+run it with the 'license' argument if they have specified a license that way.
 
-sub meta::define_form {
-  my ($namespace, $delegate) = @_;
-  push @data_types, $namespace;
-  *{"meta::${namespace}::implementation"} = $delegate;
-  *{"meta::$namespace"} = sub {
-    my ($name, $value) = @_;
-    chomp $value;
-    $data{"${namespace}::$name"} = $value;
-    $delegate->($name, $value);
-  };
-}
-
-meta::define_form 'meta', sub {
-  my ($name, $value) = @_;
-  eval $value;
-  carp $@ if $@;
-};
-
-meta::meta('bootstrap::initialization', <<'__47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU');
-
-__47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU
-
-meta::meta('datatypes::bootstrap', <<'__guYWiOv4zBmdrlI3k3sW7f/q/xsX38Xvzz0dwwLCIRM');
-meta::define_form 'bootstrap', sub {};
-__guYWiOv4zBmdrlI3k3sW7f/q/xsX38Xvzz0dwwLCIRM
-
-meta::meta('datatypes::code', <<'__VqQsjlm+HucvTRVlIGc8oi++EzzNq+rwy5bhKzunE8A');
-meta::define_form 'code', sub {
-  my ($name, undef) = @_;
-  $externalized_functions{$name} = "code::$name";
-  *{$name} = sub {
-    return edit("code::$name")     unless defined $_[0];
-    return unlit("code::$name")    if $_[0] eq 'unlit';
-    return retrieve("code::$name") if $_[0] eq 'cat';
-  };
-};
-__VqQsjlm+HucvTRVlIGc8oi++EzzNq+rwy5bhKzunE8A
-
-meta::meta('datatypes::data', <<'__s2euAFkA/SbXvMzOkLZXrqX3TdtBzEODSWBAt7wXECA');
-meta::define_form 'data', sub {
-  my ($name, undef) = @_;
-  $externalized_functions{$name} = "data::$name";
-  *{$name} = sub {
-    associate("data::$name", $_[1] || join('', <STDIN>)) if @_ > 0 && $_[0] eq '=';
-    edit("data::$name")                                  if $_[0] eq 'edit';
-    retrieve("data::$name");
-  };
-};
-__s2euAFkA/SbXvMzOkLZXrqX3TdtBzEODSWBAt7wXECA
-
-meta::meta('datatypes::function', <<'__XSIHGGHv0Sh0JBj9KIrP/OzuuB2epyvn9pgtZyWE6t0');
-meta::define_form 'function', sub {
-  my ($name, $value) = @_;
-  $externalized_functions{$name} = "function::$name";
-  *{$name} = eval "sub {\n$value\n}";
-  carp $@ if $@;
-};
-__XSIHGGHv0Sh0JBj9KIrP/OzuuB2epyvn9pgtZyWE6t0
-
-meta::meta('datatypes::internal_function', <<'__heBxmlI7O84FgR+9+ULeiCTWJ4hqd079Z02rZnl9Ong');
-meta::define_form 'internal_function', sub {
-  my ($name, $value) = @_;
-  *{$name} = eval "sub {\n$value\n}";
-  carp $@ if $@;
-};
-__heBxmlI7O84FgR+9+ULeiCTWJ4hqd079Z02rZnl9Ong
-
-meta::meta('datatypes::library', <<'__Uu9nRiHABRn+x19zBWmHpJF8gbfMA5v5MlpNoSE8MqE');
-meta::define_form 'library', sub {
-  my ($name, $value) = @_;
-  eval $value;
-  $externalized_functions{$name} = "library::$name";
-  *{$name} = sub {edit("library::$name")};
-  warn $@ if $@;
-};
-__Uu9nRiHABRn+x19zBWmHpJF8gbfMA5v5MlpNoSE8MqE
-
-meta::meta('datatypes::list-type', <<'__OKczvJ+6wi8VPNFcZ9ohlXjw+ychodWCfcELdli9p+w');
-meta::define_form '_list_type', sub {
-  my ($outer_name, $outer_value) = @_;
-  $externalized_functions{$outer_name} = "_list_type::$outer_name";
-  
-  *{$outer_name} = sub {
-    associate("${outer_value}::$_", '') for @_;
-  };
-
-  meta::define_form $outer_value, sub {
-    my ($name, $value) = @_;
-    $externalized_functions{$name} = "${outer_value}::$name";
-    *{$name} = sub {
-      my ($command, @xs) = @_;
-      my $xs = join "\n", @xs;
-      return grep length, split /\n/, retrieve("${outer_value}::$name")               if $command eq 'items';
-      associate("${outer_value}::$name", retrieve("${outer_value}::$name") . "\n$xs") if $command eq 'add' || $command eq '<<';
-      edit("${outer_value}::$name")                                                   if $command eq 'edit';
-      return retrieve("${outer_value}::$name");
-    };
-  };
-};
-__OKczvJ+6wi8VPNFcZ9ohlXjw+ychodWCfcELdli9p+w
-
-meta::meta('datatypes::message-color', <<'__nWmJgsP4S3LFdMPQnL+foYc9c5fgqIlEm6RppolzoX0');
-meta::define_form 'message_color', sub {
-  my ($name, $value) = @_;
-  $externalized_functions{$name} = "message_color::$name";
-  terminal::color($name, $value);
-  *{$name} = sub {
-    associate("message_color::$name", $_[1] || join('', <STDIN>)) if @_ > 0 && $_[0] eq '=';
-    edit("message_color::$name")                                  if $_[0] eq 'edit';
-    retrieve("message_color::$name");
-  };
-};
-__nWmJgsP4S3LFdMPQnL+foYc9c5fgqIlEm6RppolzoX0
-
-meta::meta('datatypes::note', <<'__TGOjJwmj+QJp1giUQqg2bEaQe8RvqnrFEqyZhIpSC34');
-meta::define_form 'note', sub {
-  my ($name, undef) = @_;
-  $externalized_functions{$name} = "note::$name";
-  *{$name} = sub {edit("note::$name")};
-};
-__TGOjJwmj+QJp1giUQqg2bEaQe8RvqnrFEqyZhIpSC34
-
-meta::meta('datatypes::sh', <<'__+0AR2hHnh+UldymM4MpYnXCE52tHTO+7Lp7HXSsKyTM');
-meta::define_form 'sh', sub {
-  my ($name, $value) = @_;
-  $externalized_functions{$name} = "sh::$name";
-  *{$name} = sub {
-    my ($name, @args) = @_;
-    my $filename      = state_based_filename() . '.tmp';
-    my $new_value     = $value;
-
-    @args || push(@args, $name) && ($name = 'unlit');
-
-    file::write($filename, &$name(@args));
-    $new_value =~ s/__code__/$filename/go;
-    my $output = system($new_value);
-    unlink $filename;
-    $output;
-  };
-};
-__+0AR2hHnh+UldymM4MpYnXCE52tHTO+7Lp7HXSsKyTM
-
-meta::meta('datatypes::vim-highlighter', <<'__vsGBLVDC3S+pX/k/zl5CgXeAQz2QjpBkLgx0CJ4vcn0');
-meta::define_form 'vim_highlighter', \&meta::bootstrap::implementation;
-__vsGBLVDC3S+pX/k/zl5CgXeAQz2QjpBkLgx0CJ4vcn0
-
-meta::meta('internal::runtime', <<'__Nd6Dp1A6nL7yAGeoRfeZETeaW8vnPN8HI9Diqo66vDA');
-meta::define_form 'internal', \&meta::meta::implementation;
-__Nd6Dp1A6nL7yAGeoRfeZETeaW8vnPN8HI9Diqo66vDA
-
-meta::_list_type('list', <<'__ozA5XMClOtEgdzZUav/0c1lAk3Vku/dc4e2tQHgNkTk');
-list
-__ozA5XMClOtEgdzZUav/0c1lAk3Vku/dc4e2tQHgNkTk
-
-meta::bootstrap('initialization', <<'__plktoDCjGQioE48vwfrH0xL3ulcYnTWp+fUvaFwRnnc');
-#!/usr/bin/perl
-
-use File::Temp  'tempfile';
-use Carp        'carp';
-use Digest::SHA 'sha256_base64';
-
-$|++;
-
-my %data;
-my %transient;
-my %externalized_functions;
-my @data_types;
-my @script_args;
-
-sub meta::define_form {
-  my ($namespace, $delegate) = @_;
-  push @data_types, $namespace;
-  *{"meta::${namespace}::implementation"} = $delegate;
-  *{"meta::$namespace"} = sub {
-    my ($name, $value) = @_;
-    chomp $value;
-    $data{"${namespace}::$name"} = $value;
-    $delegate->($name, $value);
-  };
-}
-
-meta::define_form 'meta', sub {
-  my ($name, $value) = @_;
-  eval $value;
-  carp $@ if $@;
-};
-
-__plktoDCjGQioE48vwfrH0xL3ulcYnTWp+fUvaFwRnnc
-
-meta::bootstrap('pod', <<'__3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg');
-
-=head1 NAME
-
-object - Stateful file-based object
-
-=head1 SYNOPSYS
-
-object [options] action [arguments...]
-
-object shell
-
-=head1 DESCRIPTION
-
-Stateful objects preserve their state between executions by rewriting themselves. Each time the script exits it replaces its contents with its new state. Thus
-state management, for user-writable scripts, is completely transparent.
-
-An object rewrites itself only if its state has changed. This may seem like a dangerous operation, but some checks are put into place to ensure that it goes
-smoothly. First, the object is initially written to a separate file. Next, that file is executed and asked to provide a hashsum of its contents. The original
-object is rewritten only if that hashsum is correct. This ensures that the replacement object is functional and has the right data.
-
-Currently the only known way to lose your data is to edit the serialization-related functions in such a way that they no longer function. However, this is not
-something most people will normally do. In the future there may be a locking mechanism to prevent unintentional edits of these attributes.
-
+You should not edit this file directly. For information about how it was constructed, go
+to L<http://spencertipping.com/#section=self-modifying-perl>. For quick usage guidelines, run
+this script with the 'usage' argument.
 =cut
 
-__3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
+$|++;
 
-meta::code('main', <<'__DxJ9kqCUmdSTvk4hza0E+JmGSRZ+zBKTexMEy4fI5YU');
-Divergence core library | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
+my %data;
+my %transient;
+my %externalized_functions;
+my %datatypes;
 
-var d = (function (eval_in_global_scope) {
-  var original_d = d, d = function () {return d.fn.apply (this, arguments)}, cache = {}, own = Object.prototype.hasOwnProperty, slice = Array.prototype.slice;
+my %locations;          # Maps eval-numbers to attribute names
 
-  d.init = function (o) {for (var i = 1, l = arguments.length, q = null; q = arguments[i], i < l; ++i) if (q.call && q.call.apply) o = q.call (o) || o;
-                                                                                                       else                        for (var k in q) own.call (q, k) && (o[k] = q[k]); return o};
-  d.init (d, {i: function (x) {return x}, k: function (x) {return function () {return x}}}, {
-    gensym: (function (count) {return function (s) {return '_g' + (s || '') + (++count).toString(36) + '_'}}) (0),  hash: function (k, v) {var r = {}; r[k] = v; return r},
-     trace: function (x) {d.tracer && d.tracer (slice.call (arguments).join (', ')); return x},                     fail: function    (s) {throw new Error (s)},
-
-        fn: d.init (function (x, e) {var c = x, f = d.fn[x === null || x === undefined ?     'null' :
-                                                      (c = x.constructor) === Function ? 'function' : c === String ? 'string' : c === Number ? 'number' :
-                                                                        c ===  Boolean ?  'boolean' : c ===  Array ?  'array' : c === Object ? 'object' : 'default'] (x, e);
-                                     return f.compose ? f : d.init (f, d.fn.methods)},
-
-                    {'string': function  (s, e) {if (! e) return cache[s] || (cache[s] = eval_in_global_scope ('(function(){return ' + d.macro.expand (s) + '})'))
-                                                     else {var ks = [], vs = []; for (var k in e) own.call (e, k) && ks.push (k) && vs.push (e[k]);
-                                                           s = '(function(' + ks.join(',') + '){return function() {' + d.macro.expand (s) + '}})';
-                                                           return (cache[s] || (cache[s] = eval_in_global_scope (s))).apply (this, vs)}},
-
-                      'array': function (xs, e) {return function () {var ys = []; for (var i = 0, l = xs.length; i < l; ++i) ys.push (d(xs[i]).apply (this, arguments)); return ys}},
-                     'object': function  (o, e) {return function () {var  r = {}; for (var k in o) own.call (o, k) && r[k] = d(o[k]).apply (this, arguments); return r}},
-                     'regexp': function  (r)    {return r.exec.bind (r)},                    'boolean': function (b) {return b ? d.i : d.k},
-                     'number': function  (n)    {return function () {return arguments[n]}}, 'function': d.i,
-                       'null': d.k (d.k),                                                    'default': function (x) {return x.fn()},
-                     methods : {}}),
-
-     macro: d.init (function (p, r) {var l = d.macro.list; p.constructor === RegExp ? l.push (function (s) {return s.replace (p, r)}) : l.push.apply (l, arguments); cache = {}; return d},
-                    {list: [], expand: function (s) {for (var ms = d.macro.list, i = ms.length - 1; i >= 0; --i) s = ms[i](s); return s}})});
-
-  d.macro (/\{\</g, '(function(){return ').macro (/\{\|([\w,\s]+)\|/g, 'function($1)({return ').macro (/[\>\|]\}/g, '})').macro (/@\(/g, '.apply(').macro (/@@/g, 'arguments').
-    macro (/@(\w+)/g, 'this.$1').macro (/\$(\d+)/g, 'arguments[$1]').macro (/\$_/g, 'this').macro (/@_/g, 'Array.prototype.slice.call(arguments)').macro (/^\./, '($0 || $_).');
-
-  (function (c) {d.init (d.fn.methods,
-    {right: d('{|f, g| d({< f.call($_, g@($_, @@)) >}) |} ($_, d($0))', {d: d}), left: d('d($0).right($_)', {d: d})},
-    {flat_right: c('f@($_, g@($_, @@))').compose (d),  flat_left: d('d($0).flat_right($_)', {d: d}),  given: d('@curry(2)@($_, @@)'),  bound_to: c('f@(g, @@)'),
-          clone: c('f@($_, @@)'),                        curried: d('$0 > 1 ? {|f, n| d({< {|xs| f.curried(n - 1)@($_, xs.concat(@_)) |} (@_) >}) |} ($_, $0) : $_', {d: d})},
-    {for_arrays: function () {var f = this; return d (function (xs) {var ys = []; for (var i = 0, l = xs.length; i < l; ++i) ys.push (f.call (this, xs[i])); return ys})},
-     for_values: function () {var f = this; return d (function  (o) {var  r = {}; for (var k in o) own.call (o, k) && r[k] = f.call (this, o[k]); return r})},
-       for_keys: function () {var f = this; return d (function  (o) {var  r = {}; for (var k in o) own.call (o, k) && r[f.call (this, k)] = o[k]; return r})},
-
-
-    }) (function (pattern) {return d ('{|f, g| d({< ' + pattern + ' >}) |} ($_, $0)', {d: d})});
-
-  return d}) (function () {return eval (arguments[0])});
-
-var d = (function (eval_in_global_scope) {
-  var c = {}, d = function () {return d[d.default_action].apply (this, arguments)}, gensym_count = 0;
-  d.init (d, {inline_macros:  [],            id: function    (x) {return x},
-                functionals:  [],           arr: function    (o) {return Array.prototype.slice.call (o)},
-      functional_extensions:  {},           map: function (o, f) {var x = {}; d.keys (o).each (function (k) {d.init (x, f (k, o[k]) || {})}); return x},
-             default_action: 'init',       keys: function    (o) {var xs = []; for (var k in o) o.hasOwnProperty (k) && xs.push (k); return xs},
-                                      functions: function     () {var as = d.arr (arguments); return d.functionals.each (function (p) {d.init.apply (this, [p].concat (as))}), d},
-                                     functional: function     () {d.arr (arguments).each (function (f) {d.functionals.push (d.init (f, d.functional_extensions))}); return this},
-                                         gensym: function    (s) {return 'gensym_' + (s || '') + (++gensym_count).toString(36)},
-                                   macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
-                                          macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); c = {}; return d},
-                                          trace: function    (x) {d.tracer && d.tracer (d.arr (arguments).join (', ')); return x}});
-
-  d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
-                         lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
-                           fail: function  () {throw new Error (this.toString())},
-                             fn: function  () {var s = this.toString(), f = c[s] || (c[s] = eval_in_global_scope ('(function(){return ' + d.macro_expand(s) + '})'));
-                                               return f.fn.apply (f, arguments)}});
-
-  d (RegExp.prototype, {maps_to: function (f) {var s = this; return function (x) {return x.replace (s, f)}},
-                          macro: function (f) {return d.macro (this, f)},
-                             fn: function  () {var f = this.exec.bind (this); return f.fn.apply (f, arguments)}});
-
-  d (Array.prototype, {flat_map: function (f) {var xs = [], f = f.fn(); this.each (function (x) {xs.push.apply (xs, f(x))}); return xs},
-                        sort_by: function (f) {return this.sort ('$0($1) < $0($2)'.fn (f.fn()))},
-                           each: function (f) {f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]); return this},
-                           grep: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) f (this[i]) && xs.push (this[i]); return xs},
-                           fold: function (f) {var f = f.fn(), xl = arguments.length, x = xl > 1 ? arguments[1] : this[0];
-                                               for (var i = 2, l = xl + this.length; i < l; ++i) x = f (x, i < xl ? arguments[i] : this[i - xl]); return x},
-                            map: function (f) {var xs = [], f = f.fn(); for (var i = 0, l = this.length; i < l; ++i) xs.push (f (this[i])); return xs},
-                             fn: function  () {var xs = this, f = function () {return xs.map ('$1.fn().apply($_,$0)'.fn (arguments))}; return f.fn.apply (f, arguments)}});
-
-  d (Function.prototype, {fn: function () {var f = this, xs = d.arr (arguments); return xs.length ? function () {return f.apply (this, xs.concat (d.arr (arguments)))} : f}});
-  d  (Boolean.prototype, {fn: function () {return Number.prototype.fn.apply (1 - this.valueOf(), arguments)}});
-  d   (Number.prototype, {fn: function () {var x = this, f = function () {return arguments[x]}; return f.fn.apply (f, arguments)}});
-
-               /^\./ .macro ('(arguments[0] || this).');
-                /@_/g.macro ('Array.prototype.slice.call(arguments)');
-               /\$_/g.macro ('this');
-           /\$(\d+)/g.macro ('"arguments[" + arguments[1] + "]"'.fn());
-            /@(\w+)/g.macro ('"this." + $1'.fn());
-
-  /\{\|([\w,\s]+)\|/g.macro ('"(function(" + $1 + "){return "'.fn()); /\|\}/g.macro ('})');
-              /\{\</g.macro ('(function(){return ');                  /\>\}/g.macro ('})');
-
-  (d.functionals = [Array, Number, Boolean, Function, String, RegExp].map ('.prototype')).push (d.functional_extensions);
-
-  d.functions ({
-      compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f.apply (this, [g.apply (this, arguments)])}},
- flat_compose:  function (g) {var f = this.fn(); g = g.fn(); return function () {return f.apply (this,  g.apply (this, arguments) )}},
-        curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
-        proxy:  function (g) {var f = this.fn(); return g ? function () {return f.apply.apply (f, g.fn().apply (this, arguments))} : function () {return f.apply (this, arguments)}},
-         bind:  function (x) {var f = this.fn(); return d.init (function () {return f.apply (x, arguments)}, {binding: x, original: f})},
-         type:  function  () {var f = function () {}, c = this.fn(); f = f.ctor.apply (f, arguments); return function () {return c.apply (new f(), arguments)}},
-         ctor:  function  () {var g = function () {f.apply (this, arguments)}, f = g.original = this.fn(); d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
-         tail: '[$_.fn(), arguments]'.fn(),
-          cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])},
-          fix:  function  () {var f = this.fn(); return f (function () {return f.fix().apply (this, arguments)})}});
-
-  return d}) (function () {return eval (arguments[0])});
-__DxJ9kqCUmdSTvk4hza0E+JmGSRZ+zBKTexMEy4fI5YU
-
-meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
-This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
-:: get main
-__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0
-
-meta::code('test', <<'__8d0FHfXtphoAXLmhYqlZuF+CRLENP8rNW4qPAuc3MzU');
-Divergence core unit tests | Spencer Tipping <spencer@spencertipping.com>
-Licensed under the terms of the MIT source code license
-
-:: get main
-:: get test-utils
-
-String tests.
-
-  assert_equal ('foo'.maps_to ('bar').foo, 'bar', 'String.maps_to');
-  assert_equal (d.macro_expand ('$_'), 'this', 'String.expand');
-
-  assert_equal ('@foo'.fn().call ({foo: 'bar'}), 'bar', 'Ruby-style this accessors');
-
-Misc. tests.
-
-  print (d.gensym ('foo'));
-
-  d.init ({}, {toString: function () {return 'bar'}});
-
-Array method tests.
-
-  assert_equal ([1, 2, 3].fold ('$0 + $1', 4, 5, 6), 21, 'Variadic Array.fold with 3');
-  assert_equal ([1, 2, 3].fold ('$0 + $1', 4),       10, 'Variadic Array.fold');
-  assert_equal ([1].fold ('$0 + $1'),                 1, 'Unary Array.fold');
-
-Number / boolean tests.
-
-  assert_equal ((0).fn() (1, 2, 3), 1, '0.fn');
-  assert_equal ((1).fn() (1, 2, 3), 2, '1.fn');
-
-  assert_equal ((0).fn(1) (2, 3, 4), 1, '0.fn(k)');
-  assert_equal ((1).fn(1, 2) (3, 4, 5), 2, '1.fn(k)');
-
-  assert_equal (true.fn()  (1, 2, 3), 1, 'true.fn');
-  assert_equal (false.fn() (1, 2, 3), 2, 'false.fn');
-
-  assert_equal (true.fn(5) (1, 2, 3), 5, 'true.fn(k)');
-  assert_equal (false.fn(5, 6) (1, 2, 3), 6, 'false.fn(k)');
-
-Function tests.
-
-  var add = '@_.fold("$0 + $1")'.fn();
-  assert_equal (add (1, 2, 3, 4, 5), 15,               'Fold over operator name');
-  assert_equal (add.curry (2) (1, 2) (3, 4, 5), 15,    'Function curry');
-  assert_equal (add.curry (5) (1) (2) (3) (4) (5), 15, 'Function curry');
-
-  assert_equal (d.macro_expand ('{|xs| xs[0] + xs[1] |}'), '(function(xs){return  xs[0] + xs[1] })', 'Enclosed function macroexpansion');
-  assert_equal ('{|x, y, z| x + y + z |}.fn ($0, $1)'.fn() (1, 2) (3), 6, 'Enclosed functions');
-  assert_equal ('{|x, y, z, t| x + y + z * t |}'.fn() () (1, 2, 3, 4), 15, 'Enclosed functions');
-
-  assert_equal ('$0.map ({<$0 + 1>})'.fn () ([1, 2, 3]).join (','), '2,3,4', 'Enclosed nullary functions');
-
-  assert_equal ('$0.tail(5)'.cps ('$0'), 5, 'Function.cps');
-
-  var factorial_cps = '$0 > 1 ? factorial_cps.tail ($0 - 1, $0 * $1, $2) : $2.tail ($1)'.fn ();         // factorial_cps (n, accumulator, continuation)
-  assert_equal (factorial_cps.fn (5, 1).cps ('$0'), 120, 'Function.cps 2');
-
-  var sum = '$0 > 0 ? sum.tail ($0 - 1, $0 + $1, $2) : $2.tail ($1)'.fn ();
-  assert_equal (sum.fn (10000, 0).cps (), (10000 * 10001) >> 1, 'Function.cps 3');                      // Runs in constant stack space
-
-  var c = '@foo = "bar"'.fn().ctor ({get_foo: '@foo'.fn()});
-  var i = new c ();
-  assert_equal (i.get_foo(), 'bar', 'Function.ctor');
-
-Re-entrant continuation tests.
-In Scheme, you can emulate /return/ like this:
-
-  | (call/cc (lambda (return)
-      ...
-      (return 5)
-      ...
-      ))
-
-This expression will result in the value 5, because the /return/ continuation escaped and bypassed other execution in the lambda body. We can't do quite that well, but we can come close. The
-only difference is that the call/cc must be a tail call, so instead of something like above, we now have:
-
-  | (call/cc (lambda (...)) (lambda (result) ...))
-
-This ends up being a delimited continuation.
-
-You can implement re-entrant continuations in JavaScript as long as you make all call/cc invocations tail calls. (This is normal CPS anyway.) Here's how you use it (naturally, normal caveats
-about code readability apply even though this isn't Scheme):
-
-  var factorial_cps_2 = '$0 > 1 ? factorial_cps_2.tail ($0 - 1, $0 * $1, $2) : $2.tail ($2)'.fn ();     // Returns its continuation
-  factorial_cps_2.count = 0;
-  assert_equal (factorial_cps_2.fn (5, 1).cps ('$0.cc || ($0.cc = $1), ++$0.count'.fn (factorial_cps_2)), 1, 'Function.cps re-entrant 1');
-  assert_equal (factorial_cps_2.cc (), 2, 'Function.cps re-entrant 2');
-  assert_equal (factorial_cps_2.cc (), 3, 'Function.cps re-entrant 3');
-  assert_equal (factorial_cps_2.cc (), 4, 'Function.cps re-entrant 4');
-
-Fix tests.
-
-  var factorial_fix = (function (f) {return '$1 > 1 ? $1 * $0($1 - 1) : $1'.fn (f)}).fix ();
-  assert_equal (factorial_fix (5), 120);
-__8d0FHfXtphoAXLmhYqlZuF+CRLENP8rNW4qPAuc3MzU
-
-meta::code('test-utils', <<'__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc');
-Unit test utilities.
-
-  var assert       = function (x, msg) {if (! x) throw new Error ("Assertion failed: " + msg)};
-  var assert_equal = function (x, y, msg) {x === y || assert (x === y, msg + ' -- ' + x.toString () + ' !== ' + y.toString ())};
-  var trace        = function (x) {print (x); return x};
-__y0hvweWKk7wy9bm5fJfhHpJ0k7OOEIwhA2vuE7aAEEc
-
-meta::data('default-action', <<'__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc');
-shell
-__zmNcTqv/Xk9W26j7HjnKI1UwqitrGFM+7xrzhiAWxXc
-
-meta::data('meta-associations', <<'__PRn3E4sEYBafwIXKC61VRabCemMeSeRn2H7z3wLgOo4');
-^function:: .pl
-^internal_function:: .pl
-^meta:: .pl
-^bootstrap:: .pl
-^code:: .ljs
-^vim_highlighter:: .vim
-__PRn3E4sEYBafwIXKC61VRabCemMeSeRn2H7z3wLgOo4
-
-meta::data('name', <<'__mr88igdDVcDPwZrY2e6T57JGQ5ZIqA5D3C5BubQZQn8');
-divergence
-__mr88igdDVcDPwZrY2e6T57JGQ5ZIqA5D3C5BubQZQn8
-
-meta::function('add-to', <<'__KBgra0vG1gIsUI8CCVf4ZEdCatZDCdVO6HuUx+jOJ9Q');
-my ($filename) = @_;
-my @members = grep /^implementation::/, keys %data;
-
-for (@members) {
-  my $destination_name = basename($_);
-  open my($handle), "| $filename import $destination_name" or messages::error("Attribute $_ could not be written.");
-  print $handle retrieve($_);
-  close $handle;
+sub meta::define_form {
+  my ($namespace, $delegate) = @_;
+  $datatypes{$namespace} = $delegate;
+  *{"meta::${namespace}::implementation"} = $delegate;
+  *{"meta::$namespace"} = sub {
+    my ($name, $value) = @_;
+    chomp $value;
+    $data{"${namespace}::$name"} = $value;
+    $delegate->($name, $value);
+  };
 }
-__KBgra0vG1gIsUI8CCVf4ZEdCatZDCdVO6HuUx+jOJ9Q
 
-meta::function('attributes', <<'__SHSGXpl5WufcHc7hGxs0XPxlKSgo0XQ752HpjI4rgRg');
-grep /^attribute::/, sort keys %data;
-__SHSGXpl5WufcHc7hGxs0XPxlKSgo0XQ752HpjI4rgRg
+sub meta::eval_in {
+  my ($what, $where) = @_;
 
-meta::function('cat', <<'__h2PeSpk/pPmrzLRTTofdLTbhj06IWUw5WWke6ggUsdk');
+  # Obtain next eval-number and alias it to the designated location
+  @locations{eval('__FILE__') =~ /\(eval (\d+)\)/} = ($where);
+
+  my $result = eval $what;
+  $@ =~ s/\(eval \d+\)/$where/ if $@;
+  warn $@ if $@;
+  $result;
+}
+
+meta::define_form 'meta', sub {
+  my ($name, $value) = @_;
+  meta::eval_in($value, "meta::$name");
+};
+
+meta::meta('configure', <<'__25976e07665878d3fae18f050160343f');
+# A function to configure transients. Transients can be used to store any number of
+# different things, but one of the more common usages is type descriptors.
+
+sub meta::configure {
+  my ($datatype, %options) = @_;
+  $transient{$_}{$datatype} = $options{$_} for keys %options;
+}
+__25976e07665878d3fae18f050160343f
+
+meta::meta('externalize', <<'__9141b4e8752515391385516ae94b23b5');
+# Function externalization. Data types should call this method when defining a function
+# that has an external interface.
+
+sub meta::externalize {
+  my ($name, $attribute, $implementation) = @_;
+  $externalized_functions{$name} = $attribute;
+  *{"::$name"} = $implementation || $attribute;
+}
+__9141b4e8752515391385516ae94b23b5
+
+meta::meta('externalize_template', <<'__1e90e7ccb5fea1d498bbaaa6e7e43851');
+sub meta::externalize_template {
+  my ($name, $implementation) = @_;
+  meta::externalize "template::$name", "template::$name", $implementation;
+}
+__1e90e7ccb5fea1d498bbaaa6e7e43851
+
+meta::meta('functor::code-templates', <<'__d7c4de4adf3c7606453a118f75e73fd1');
+package code;
+
+# Templates for generating named source files.
+sub template {
+  my ($name, $implementation) = @_;
+  $implementation ||= sub {
+    my ($line, $block) = @_;
+    my $append         = $line =~ s/^\h*>>\h*//o;
+
+    $line =~ s/\s+.*$//o;
+    file::write(&{'::source-directory'}() . "/$line", ($append && "\n") . $block, mkpath => 1, append => $append);
+    "\\lstset{caption=$line}\\begin{${name}code}\n$block \\end{${name}code}";
+  };
+
+  meta::externalize_template $name, $implementation;
+}
+__d7c4de4adf3c7606453a118f75e73fd1
+
+meta::meta('functor::editable', <<'__e97984f7c34d9f06173be574e28c3f91');
+# An editable type. This creates a type whose default action is to open an editor
+# on whichever value is mentioned. This can be changed using different flags.
+
+sub meta::functor::editable {
+  my ($typename, %options) = @_;
+
+  meta::configure $typename, %options;
+  meta::define_form $typename, sub {
+    my ($name, $value) = @_;
+
+    $options{on_bind} && &{$options{on_bind}}($name, $value);
+
+    meta::externalize $options{prefix} . $name, "${typename}::$name", sub {
+      my $attribute             = "${typename}::$name";
+      my ($command, @new_value) = @_;
+
+      return edit($attribute)                                                              if $command eq 'edit'                      or $options{default} eq 'edit'   and not defined $command;
+      return associate($attribute, @new_value ? join(' ', @new_value) : join('', <STDIN>)) if $command eq '=' or $command eq 'import' or $options{default} eq 'import' and not defined $command;
+      return preprocess(retrieve($attribute))                                              if $command eq 'compile'                   or $options{preprocess}          and not defined $command;
+      return retrieve($attribute);
+    };
+  };
+}
+__e97984f7c34d9f06173be574e28c3f91
+
+meta::meta('functor::tex-templates', <<'__34a5da8558897a4388fc22ed4b0c3c6b');
+package tex;
+
+# A wrapper for TeX templates. The idea is always the same, so I'm abstracting out the
+# common externalization logic here.
+sub template_for(&) {
+  my ($implementation) = @_;
+  sub {
+    my %names = @_;
+    for my $name (keys %names) {
+      ::meta::externalize_template $name, sub {
+        &$implementation($names{$name}, @_);
+      };
+    }
+  };
+}
+
+sub id {
+  map {$_ => $_} @_;
+}
+
+# Creates a one-line or multiline template based on normal TeX syntax. It's a straight
+# transfer into TeX with no preprocessing.
+*template = template_for {
+  my ($name, $line, $block) = @_;
+  $block ? "\\begin{$name}\n$block\n\\end{$name}" : "\\$name\{$line\}";
+};
+
+# Creates a labeled one-line template. This is just like normal TeX, but assumes the
+# specification of a label name after a pipe character.
+*labeled_template = template_for {
+  my ($name, $line, undef) = @_;
+  my ($real_stuff, $label) = split /\h*\|\h*/, $line;
+  "\\$name\{$real_stuff\}" . ($label && "\\label{$label}");
+};
+__34a5da8558897a4388fc22ed4b0c3c6b
+
+meta::meta('internal::runtime', <<'__0172b18c9b9311477d2f6b8c16bb44c2');
+meta::configure 'internal', extension => '.pl', inherit => 1;
+meta::define_form 'internal', \&meta::meta::implementation;
+__0172b18c9b9311477d2f6b8c16bb44c2
+
+meta::meta('template::code', 'code::template $_ for qw/java cpp asm javascript html resource/;');
+meta::meta('template::document', 'tex::template(tex::id(qw/document tableofcontents maketitle title author date abstract documentclass verbatim/));');
+meta::meta('template::math', "tex::template align => 'align*', nalign => 'align';");
+meta::meta('template::sections', <<'__0bf14cbc6a0e77d9b82dd185d8d8a9a0');
+tex::labeled_template(s1 => 'section', s2 => 'subsection', s3 => 'subsubsection', s4 => 'paragraph', s5 => 'subparagraph');
+tex::labeled_template(sc => 'chapter', sp => 'part');
+__0bf14cbc6a0e77d9b82dd185d8d8a9a0
+
+meta::meta('type::bootstrap', <<'__297d03fb32df03b46ea418469fc4e49e');
+# Bootstrap attributes don't get executed. The reason for this is that because
+# they are serialized directly into the header of the file (and later duplicated
+# as regular data attributes), they will have already been executed when the
+# file is loaded.
+
+meta::configure 'bootstrap', extension => '.pl', inherit => 1;
+meta::define_form 'bootstrap', sub {};
+__297d03fb32df03b46ea418469fc4e49e
+
+meta::meta('type::data', "meta::functor::editable 'data', extension => '', inherit => 0, default => 'cat';");
+meta::meta('type::function', <<'__d93b3cc15693707dac518e3d6b1f5648');
+meta::configure 'function', extension => '.pl', inherit => 1;
+meta::define_form 'function', sub {
+  my ($name, $value) = @_;
+  meta::externalize $name, "function::$name", meta::eval_in("sub {\n$value\n}", "function::$name");
+};
+__d93b3cc15693707dac518e3d6b1f5648
+
+meta::meta('type::internal_function', <<'__34abb44c67c7e282569e28ef6f4d62ab');
+meta::configure 'internal_function', extension => '.pl', inherit => 1;
+meta::define_form 'internal_function', sub {
+  my ($name, $value) = @_;
+  *{$name} = meta::eval_in("sub {\n$value\n}", "internal_function::$name");
+};
+__34abb44c67c7e282569e28ef6f4d62ab
+
+meta::meta('type::library', <<'__a9c0193f297bbc96a78eb5e27727fd30');
+meta::configure 'library', extension => '.pl', inherit => 1;
+meta::define_form 'library', sub {
+  my ($name, $value) = @_;
+  meta::eval_in($value, "library::$name");
+  meta::externalize $name, "library::$name", sub {
+    edit("library::$name");
+  };
+};
+__a9c0193f297bbc96a78eb5e27727fd30
+
+meta::meta('type::message_color', <<'__794bf137c425293738f07636bcfb5c55');
+meta::configure 'message_color', extension => '', inherit => 1;
+meta::define_form 'message_color', sub {
+  my ($name, $value) = @_;
+  terminal::color($name, $value);
+};
+__794bf137c425293738f07636bcfb5c55
+
+meta::meta('type::meta', <<'__640f25635ce2365b0648962918cf9932');
+# This doesn't define a new type. It customizes the existing 'meta' type
+# defined in bootstrap::initialization. Note that horrible things will
+# happen if you redefine it using the editable functor.
+
+meta::configure 'meta', extension => '.pl', inherit => 1;
+__640f25635ce2365b0648962918cf9932
+
+meta::meta('type::note', "meta::functor::editable 'note', extension => '', inherit => 0, default => 'edit';");
+meta::meta('type::resource', "meta::functor::editable 'resource', extension => '.cltex', inherit => 1, default => 'edit';");
+meta::meta('type::section', "meta::functor::editable 'section', extension => '.cltex', inherit => 0, default => 'edit';");
+meta::meta('type::state', <<'__c1f29670be26f1df6100ffe4334e1202');
+# Allows temporary or long-term storage of states. Nothing particularly insightful
+# is done about compression, so storing alternative states will cause a large
+# increase in size. Also, states don't contain other states -- otherwise the size
+# increase would be exponential.
+
+# States are created with the save-state function.
+
+meta::configure 'state', inherit => 0, extension => '.pl';
+meta::define_form 'state', \&meta::bootstrap::implementation;
+__c1f29670be26f1df6100ffe4334e1202
+
+meta::meta('type::template', <<'__25f4d6eafb1d3eea6d5d3d9a71a5623e');
+meta::configure 'template', extension => '.pl', inherit => 1;
+meta::define_form 'template', sub {
+  my ($name, $value) = @_;
+  meta::externalize "template::$name", "template::$name", meta::eval_in("sub {\n$value\n}", "template::$name");
+};
+__25f4d6eafb1d3eea6d5d3d9a71a5623e
+
+meta::meta('type::vim_highlighter', "meta::functor::editable 'vim_highlighter', extension => '.vim', inherit => 1, default => 'edit';");
+meta::meta('type::watch', "meta::functor::editable 'watch', prefix => 'watch::', inherit => 1, extension => '.pl', default => 'cat';");
+meta::bootstrap('initialization', <<'__baa43e5e8e6e1cd76d4e2de828ceaa4d');
+#!/usr/bin/perl
+
+=head1 Self-modifying Perl script
+
+=head2 Original implementation by Spencer Tipping L<http://spencertipping.com>
+
+The prototype for this script is licensed under the terms of the MIT source code license.
+However, this script in particular may be under different licensing terms. To find out how
+this script is licensed, please contact whoever sent it to you. Alternatively, you may
+run it with the 'license' argument if they have specified a license that way.
+
+You should not edit this file directly. For information about how it was constructed, go
+to L<http://spencertipping.com/#section=self-modifying-perl>. For quick usage guidelines, run
+this script with the 'usage' argument.
+=cut
+
+$|++;
+
+my %data;
+my %transient;
+my %externalized_functions;
+my %datatypes;
+
+my %locations;          # Maps eval-numbers to attribute names
+
+sub meta::define_form {
+  my ($namespace, $delegate) = @_;
+  $datatypes{$namespace} = $delegate;
+  *{"meta::${namespace}::implementation"} = $delegate;
+  *{"meta::$namespace"} = sub {
+    my ($name, $value) = @_;
+    chomp $value;
+    $data{"${namespace}::$name"} = $value;
+    $delegate->($name, $value);
+  };
+}
+
+sub meta::eval_in {
+  my ($what, $where) = @_;
+
+  # Obtain next eval-number and alias it to the designated location
+  @locations{eval('__FILE__') =~ /\(eval (\d+)\)/} = ($where);
+
+  my $result = eval $what;
+  $@ =~ s/\(eval \d+\)/$where/ if $@;
+  warn $@ if $@;
+  $result;
+}
+
+meta::define_form 'meta', sub {
+  my ($name, $value) = @_;
+  meta::eval_in($value, "meta::$name");
+};
+
+__baa43e5e8e6e1cd76d4e2de828ceaa4d
+
+meta::data('default-action', 'shell');
+meta::data('license', <<'__3c6177256de0fddb721f534c3ad8c0ee');
+MIT License
+Copyright (c) 2010 Spencer Tipping
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+__3c6177256de0fddb721f534c3ad8c0ee
+
+meta::data('name', 'divergence');
+meta::data('output-dir', '/tmp');
+meta::data('pdf-output-file', '/tmp/divergence.9e2b37f74c4f40f02dfc172889a0a2b8/document.pdf');
+meta::data('pdf-reader', '/usr/bin/evince');
+meta::data('pdftex-command', 'pdflatex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
+meta::data('quiet', '1');
+meta::data('source-directory', '/tmp/src');
+meta::data('table-of-contents', '1');
+meta::data('tex-command', 'latex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
+meta::data('watching', '0');
+meta::function('cat', <<'__c8e76a0cf10e2061e9cf9e1643922c3e');
 my ($name) = @_;
 $data{$name};
-__h2PeSpk/pPmrzLRTTofdLTbhj06IWUw5WWke6ggUsdk
+__c8e76a0cf10e2061e9cf9e1643922c3e
 
-meta::function('clone', <<'__qP6xPZE75s9g0XJIiC6FGw0vnj2j0glUzsAHxyA3lvY');
+meta::function('clean', <<'__1269c1a312062a1598dcde16eb6134e2');
+my $output_directory = &{'pdf-output-file'}();
+$output_directory =~ s+/.*++g;
+unlink <$output_directory/*>;
+rmdir $output_directory;
+__1269c1a312062a1598dcde16eb6134e2
+
+meta::function('clone', <<'__fec8cf43b197da97cfd5e49d75891d57');
 for (@_) {
   if ($_) {
     eval {
@@ -500,72 +369,79 @@ for (@_) {
     print "$@\n" if $@;
   }
 }
-__qP6xPZE75s9g0XJIiC6FGw0vnj2j0glUzsAHxyA3lvY
+__fec8cf43b197da97cfd5e49d75891d57
 
-meta::function('code', <<'__NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA');
-join "\n\n", map preprocess(retrieve("code::$_")), @_;
-__NBNecoJ9JVwyGbA+8LrNYjQKQyQOxdFAkjgZ4ueT5QA
+meta::function('compile', <<'__8de64ff7f4823d92f3258e211608d9bb');
+my $tex_command         = &{'tex-command'}();
+my $pdftex_command      = &{'pdftex-command'}();
+my $filename            = 'document';
 
-meta::function('compile', <<'__fS4SFKwDwlQRAPgdkfOItg4KJJn5c4BwZzQkiAe8Kvc');
-my $name = name();
-file::write("$name.js", unlit('main'));
-__fS4SFKwDwlQRAPgdkfOItg4KJJn5c4BwZzQkiAe8Kvc
+my $contents            = tex();
+my $output_directory    = &{'output-dir'}();
+chomp $output_directory;
 
-meta::function('cp', <<'__yn1SQkcEk6o+gnuCy3QGVFtQb2piaCoUdJPGUkLjpD4');
+my $temporary_directory = state_based_filename();
+$temporary_directory =~ s+^.*/++;
+$temporary_directory = "$output_directory/$temporary_directory";
+
+$tex_command    =~ s/__TEMPORARY_DIRECTORY__/$temporary_directory/g;
+$tex_command    =~ s+__INPUT_FILE__+$temporary_directory/$filename.tex+g;
+
+$pdftex_command =~ s/__TEMPORARY_DIRECTORY__/$temporary_directory/g;
+$pdftex_command =~ s+__INPUT_FILE__+$temporary_directory/$filename.tex+g;
+
+mkdir $temporary_directory;
+file::write("$temporary_directory/$filename.tex", $contents);
+
+my $result = &{'table-of-contents'}() ? system($tex_command) || system($tex_command) || system($pdftex_command) : system($pdftex_command);
+
+associate('data::pdf-output-file', "$temporary_directory/$filename.pdf", execute => 1);
+$result;
+__8de64ff7f4823d92f3258e211608d9bb
+
+meta::function('cp', <<'__d33fe9aa270eeee6dcc3ee445447a6a7');
 my ($from, $to) = @_;
-$data{$to} = $data{$from} if $data{$from};
-messages::error("No such attribute $from") unless $data{$from};
-$data{$from};
-__yn1SQkcEk6o+gnuCy3QGVFtQb2piaCoUdJPGUkLjpD4
+my $exists = exists $data{$from};
+associate($to, retrieve($from)) if $exists;
+die "No such attribute $from" unless $exists;
+retrieve($from);
+__d33fe9aa270eeee6dcc3ee445447a6a7
 
-meta::function('create', <<'__YDNTuzkJSNUIk4tbdwxep6/rT8uGnceIj7rljM9gusc');
+meta::function('create', <<'__97e5444422f5f6087371f59ddc3e1b8c');
 my ($name, $value) = @_;
-messages::error("Attribute $name already exists.") if grep {$_ eq $name} keys %data;
-if ($value) {
+
+return edit($name) if exists $data{$name};
+
+if (defined $value) {
   associate($name, $value);
 } else {
-  associate($name,'');
-  edit ($name);
+  associate($name, '');
+  edit($name);
 }
-__YDNTuzkJSNUIk4tbdwxep6/rT8uGnceIj7rljM9gusc
+__97e5444422f5f6087371f59ddc3e1b8c
 
-meta::function('deps', <<'__SZ4U6b8mZigWcPg3LLsBHJGEgtUKpWe3Pvy87e88W2E');
-&{'push-state'}();
-terminal::message('info', 'The old state of this object is being preserved. Run pop-state to revert after this import is complete.');
-for (grep length && ! /^#/, split /\n/, dependencies()) {
-  my ($name, $attribute) = split;
-  (my $processed_name = $name) =~ s/^\.\///;
-  terminal::message('status', "Importing $attribute from $name as $processed_name-lib");
-  associate("code::$processed_name-lib", join('', qx/$name cat code::$attribute/));
-}
-__SZ4U6b8mZigWcPg3LLsBHJGEgtUKpWe3Pvy87e88W2E
+meta::function('current-state', <<'__0d932bd14547669ffbc86fde3ae9d050');
+my @valid_keys   = grep ! /^internal::runtime$/ && ! /^state::/, sort keys %data;
+my @ordered_keys = (grep(/^meta::/, @valid_keys), grep(! /^meta::/, @valid_keys));
+join "\n", map serialize_single($_), @ordered_keys;
+__0d932bd14547669ffbc86fde3ae9d050
 
-meta::function('edit', <<'__rAkSOSll0evjt/D0qmnz2M++ACqz6cPtN8TLTHdQUJE');
+meta::function('edit', <<'__6912fb43aad413e79cbf45e134866b6e');
 my ($name, %options) = @_;
+my $extension = $transient{extension}{namespace($name)} || '';
 
-my $meta_extension = join '', grep {
-  my $s = $_;
-  $s =~ s/\s.*$//;
-  $name =~ /$s/
-} split /\n/, &{'meta-associations'}();
-
-$meta_extension =~ s/^.*\s//;
-chomp $meta_extension;
-
-messages::error("Attribute $name does not exist.") unless grep {$_ eq $name} keys %data;
-associate($name, invoke_editor_on($data{$name} || "# Attribute $name", %options, extension => $meta_extension),
+die "Attribute $name does not exist." unless exists $data{$name};
+associate($name, invoke_editor_on($data{$name} || "# Attribute $name", %options, attribute => $name, extension => $extension),
           execute => $name !~ /^internal::/ && $name !~ /^bootstrap::/);
-delete $data{$name} if length($data{$name}) == 0;
-
 save();
-__rAkSOSll0evjt/D0qmnz2M++ACqz6cPtN8TLTHdQUJE
+__6912fb43aad413e79cbf45e134866b6e
 
-meta::function('exists', <<'__bxU1sDtIh3+P1x0HuuY0f7sKHr9qNZUEl64m2fvwmDk');
+meta::function('exists', <<'__3c6aa32026f04564ec4861c77a8e6465');
 my $name = shift;
 grep {$_ eq $name} keys %data;
-__bxU1sDtIh3+P1x0HuuY0f7sKHr9qNZUEl64m2fvwmDk
+__3c6aa32026f04564ec4861c77a8e6465
 
-meta::function('export', <<'__I4eRG7HtLDZhFgrlr0QDrQO5MRwJYGFlotQsWQIE/d8');
+meta::function('export', <<'__6c445eea603f9863df0f8db445fd708e');
 # Exports data into a text file.
 #   export attr1 attr2 attr3 ... file.txt
 
@@ -573,19 +449,19 @@ my $name = pop @_;
 my @attributes = @_;
 
 if (@attributes) {
-  my $file = join "\n", map {cat($_)} @attributes;
-  file::write ($name, $file);
+  my $file = join "\n", map cat($_), @attributes;
+  file::write($name, $file);
 } else {
-  messages::error ("Not enough arguments");
+  die 'Not enough arguments';
 }
-__I4eRG7HtLDZhFgrlr0QDrQO5MRwJYGFlotQsWQIE/d8
+__6c445eea603f9863df0f8db445fd708e
 
-meta::function('grab', <<'__sXs1aeJVBERH6nWE7ZpWiIO5Cg7fSBWcoscDg1DHzD8');
-my ($filename, @attribute_names) = @_;
-associate("implementation::$_", `$filename cat $_`) for @attribute_names;
-__sXs1aeJVBERH6nWE7ZpWiIO5Cg7fSBWcoscDg1DHzD8
+meta::function('hash', <<'__7c4145cf6e97dfb9ab04a613866751d3');
+my ($data) = @_;
+fast_hash($data);
+__7c4145cf6e97dfb9ab04a613866751d3
 
-meta::function('import', <<'__7f1Q36AcIJ8/OaaYPGUq10PPFTKnEF0CMxS56DRsjKk');
+meta::function('import', <<'__84d29edfe7ad2119465fdcf7d037ed1c');
 my $name  = pop @_;
 my @files = @_;
 
@@ -596,202 +472,216 @@ if (@files) {
 else {
   associate($name, join('', <STDIN>));
 }
-__7f1Q36AcIJ8/OaaYPGUq10PPFTKnEF0CMxS56DRsjKk
+__84d29edfe7ad2119465fdcf7d037ed1c
 
-meta::function('listing', <<'__ISxcI25BrOnRRxDUQm5UL5wWzHJxL/OY8QdSUdnRJoE');
-my ($profile, $line, $context) = @_;
-$line    ||= 1;
-$context ||= 4;
+meta::function('import-bundle', <<'__4c7139ed5c9f65f38a33cf8f8a6cae27');
+eval join '', <STDIN>;
+die $@ if $@;
+__4c7139ed5c9f65f38a33cf8f8a6cae27
 
-my $result = '';
-my @lines  = split /\n/, unlit($profile);
-for my $l ($line - $context .. $line + $context) {
-  next if $l <= 0;
-  last if $l >  @lines;
-  $result .= sprintf "\033[1;34m%6d\033[0;0m: %s%s%s\n", $l, $l == $line ? "\033[1;32m" : '', $lines[$l - 1], $l == $line ? "\033[0;0m" : '';
-}
+meta::function('load-state', <<'__878f141333993ead4d272027ad301eee');
+my ($state_name) = @_;
+my $state = retrieve("state::$state_name");
 
-$result;
-__ISxcI25BrOnRRxDUQm5UL5wWzHJxL/OY8QdSUdnRJoE
+terminal::message('state', 'Saving current state into _...');
+&{'save-state'}('_');
 
-meta::function('load-dependencies', <<'__oYAWdUSIg7K9xPssNpQhu7nUGr94qBGg5QJpTDAA3sA');
-my $errors = '';
-for (grep length, split /\n/, &{'dependencies'}()) {
-  terminal::message('loader', "Running integration test checks on $_...");
-  my $output = `$_ :check`;
-  chomp $output;
-  $errors .= $output ? "module $_\n$output\n" : '';
-}
+terminal::message('state', 'Removing attributes from %data and unexternalizing functions...');
+delete $data{$_} for grep ! /^state::/ && ! /^internal::runtime$/, keys %data;
+%externalized_functions = ();
 
-return terminal::message('error', "dependency loading failed:\n$errors") if $errors;
-associate('code::cached-dependencies', join('', map `$_ :export`, grep length, split /\n/, &{'dependencies'}()));
-terminal::message('loader', "imported dependencies");
-__oYAWdUSIg7K9xPssNpQhu7nUGr94qBGg5QJpTDAA3sA
+terminal::message('state', "Restoring state $state_name...");
+eval($state);
+terminal::message('error', $@) if $@;
+reload();
+verify();
+__878f141333993ead4d272027ad301eee
 
-meta::function('lock', <<'__pqf/HijyN91BWpnS+uWYip/mFhHhcd+M9/YdlYsvv9Y');
+meta::function('lock', <<'__d94992bf224487f5bfd439eb822db309');
 my (undef, undef, $mode) = stat $0;
 chmod $mode & 0555, $0;
-__pqf/HijyN91BWpnS+uWYip/mFhHhcd+M9/YdlYsvv9Y
+__d94992bf224487f5bfd439eb822db309
 
-meta::function('ls', <<'__OlQOgKhp6VUThx34wxmM3MFkwsHfR/c8dqvu07z059E');
-my $criteria = join '|', @_;
-my @lines = grep /$criteria/, sort keys %externalized_functions;
-my $length = 0;
-$length >= length($_) or $length = length($_) for @lines;
+meta::function('ls', <<'__b9d8eab31beedc7e20616be1a37a3c96');
+my $criteria   = join('|', @_) || '.';
+my @external   = grep /$criteria/, sort keys %externalized_functions;
+my @defined_by = map $externalized_functions{$_}, @external;
+my @shadows    = grep ! defined $data{$externalized_functions{$_}}, @external;
 
-my @new_lines = map($_ . ' ' x ($length + 2 - length($_)) . $externalized_functions{$_}, @lines);
-join("\n", sort @new_lines);
-__OlQOgKhp6VUThx34wxmM3MFkwsHfR/c8dqvu07z059E
+table_display([@external, @shadows], [@defined_by, map('< shadow >', @shadows)]);
+__b9d8eab31beedc7e20616be1a37a3c96
 
-meta::function('ls-a', <<'__S5EydJRu+YIfcFmTMz1ZHX0cANJq32bU5JnYCe1tWdk');
-my $criteria = join '|', @_;
-my @lines    = grep(/$criteria/, sort keys %data);
-my $length   = 0;
+meta::function('ls-a', <<'__15542def52b2c692c8fdb90278493dc2');
+my $criteria   = join('|', @_) || '.';
+my @attributes = grep(/$criteria/, sort keys %data);
+my %inverses   = map {$externalized_functions{$_} => $_} keys %externalized_functions;
 
-my %inverses;
-$inverses{$externalized_functions{$_}} = $_ for keys %externalized_functions;
+table_display([@attributes], [map $inverses{$_}, @attributes], [map sprintf('%6d', length(serialize_single($_))), @attributes],
+                                                               [map sprintf('%6d', length(retrieve($_))),         @attributes]);
+__15542def52b2c692c8fdb90278493dc2
 
-$length >= length($_) or $length = length($_) for @lines;
-my @new_lines = map($_ . ' ' x ($length + 2 - length($_)) . ($inverses{$_} || ''), @lines);
-join "\n", @new_lines;
-__S5EydJRu+YIfcFmTMz1ZHX0cANJq32bU5JnYCe1tWdk
+meta::function('make', <<'__9a3d7e3c7e0017f4c9b239f3858aaf03');
+compile() || view();
+clean();
+__9a3d7e3c7e0017f4c9b239f3858aaf03
 
-meta::function('mv', <<'__ijyNZ8r34FVK0Ki9/Q0Irx5k9U0pZ+/frrdlu+qkEP4');
+meta::function('mv', <<'__09f350db8406303ade06d229477d79ad');
 my ($from, $to) = @_;
-messages::error("The '$from' attribute does not exist.") unless grep $from, keys %data;
+my $destination_namespace = namespace($to);
+
+die "'$from' does not exist" unless exists $data{$from};
+die "The namepsace '$destination_namespace' does not exist" unless $datatypes{$destination_namespace};
+
 associate($to, retrieve($from));
 rm($from);
-__ijyNZ8r34FVK0Ki9/Q0Irx5k9U0pZ+/frrdlu+qkEP4
+__09f350db8406303ade06d229477d79ad
 
-meta::function('perl', <<'__Ojd593Fa9fx1Yx2XuPzK6WTUyxO70Nbmlbl9YRodUWA');
+meta::function('note', <<'__bcbfeac6dd2112f47296265444570a6e');
+# Creates a note with a given name, useful for jotting things down.
+create("note::$_[0]");
+__bcbfeac6dd2112f47296265444570a6e
+
+meta::function('perl', <<'__d8818fd77e9e7ce68811e0947dfcc206');
 my $result = eval($_[0]);
 $@ ? $@ : $result;
-__Ojd593Fa9fx1Yx2XuPzK6WTUyxO70Nbmlbl9YRodUWA
+__d8818fd77e9e7ce68811e0947dfcc206
 
-meta::function('pop-state', <<'__eqnCLsMapvq2sYSx82KCxh25zmff+JIXFMYUan2kGKM');
+meta::function('pop-state', <<'__90a6d3599a269ca0bef8126df7aba8e0');
 %data = %{pop @{$transient{'states'}}} if @{$transient{'states'}};
 reload();
-__eqnCLsMapvq2sYSx82KCxh25zmff+JIXFMYUan2kGKM
+__90a6d3599a269ca0bef8126df7aba8e0
 
-meta::function('preprocess', <<'__SP+M4pf8VRk5hJv0AVOHi8DdG8vAj6ClENKjab8Vbg8');
-my ($document) = @_;
-my %commands = (get => sub {"\n" . code(split /\s+/, $_[0]) . "\n"});
-join "\n", map {m/^\s*::\s*(\w+)\s(.*)$/o && defined $commands{$1} ? $commands{$1}($2, $_) : $_} split /\n/, $document;
-__SP+M4pf8VRk5hJv0AVOHi8DdG8vAj6ClENKjab8Vbg8
+meta::function('preprocess', <<'__66e539d29e9afa903569efad0eb7c886');
+# Implements a simple preprocessing language.
+# Syntax follows two forms. One is the 'line form', which gives you a way to specify arguments inline
+# but not spanning multiple lines. The other is 'block form', which gives you access to both one-line
+# arguments and a block of lines. The line parameters are passed in verbatim, and the block is
+# indentation-adjusted and then passed in as a second parameter. (Indentation is adjusted to align
+# with the name of the command.)
+#
+# Here are the forms:
+#
+# - line arguments to function
+#
+# - block line arguments << eof
+#   block contents
+#   block contents
+#   ...
+# - eof
 
-meta::function('pull', <<'__ZU6uOu7dBdjjoNdEL/U7yrjicOQR5OLFQAacjrKqSCg');
-my ($class_name) = @_;
-my @attributes = grep /^implementation::/, split /\n/, `$class_name ls-a`;
+my ($string, %options) = @_;
+my $expansions         = 0;
+my $old_string         = '';
+my $limit              = $options{expansion_limit} || 100;
+my @pieces             = ();
 
-for (@attributes) {
-  s/^\s+//;
-  s/\s+$//;
-  print STDERR "Adding $_\n";
-  associate(basename($_), `$class_name cat "$_"`);
+sub adjust_spaces {
+  my ($spaces, $string) = @_;
+  $string =~ s/^$spaces  //mg;
+  chomp $string;
+  $string;
 }
-__ZU6uOu7dBdjjoNdEL/U7yrjicOQR5OLFQAacjrKqSCg
 
-meta::function('push-state', <<'__ik0ofu7R8gHAKSmMjek79V+yfgdjdK5Jmtwf7h8SpJk');
+while ($old_string ne $string and $expansions++ < $limit) {
+  $old_string = $string;
+
+  while ((my @pieces = split  /(^(\h*)-\h \S+ \h* \V* <<\h*(\w+)$ \n .*?  ^\2-\h\3$)/xms, $string) > 1 and $expansions++ < $limit) {
+    $pieces[1 + ($_ << 2)] =~ /^ (\h*)-\h(\S+)\h*(\V*)<<\h*(\w+)$ \n(.*?) ^\1-\h\4 $/xms && $externalized_functions{"template::$2"} and
+      $pieces[1 + ($_ << 2)] = &{"template::$2"}($3, adjust_spaces($1, $5))
+      for 0 .. $#pieces / 4;
+
+    @pieces[2 + ($_ << 2), 3 + ($_ << 2)] = '' for 0 .. $#pieces / 4;
+    $string = join '', @pieces;
+  }
+
+  if ((my @pieces = split     /^(\h*-\h \S+ \h* .*)$/xom, $string) > 1) {
+    $pieces[1 + ($_ << 1)] =~ /^ \h*-\h(\S+)\h*(.*)$/xom && $externalized_functions{"template::$1"} and
+      $pieces[1 + ($_ << 1)] = &{"template::$1"}($2)
+      for 0 .. $#pieces >> 1;
+
+    $string = join '', @pieces;
+  }
+}
+
+$string;
+__66e539d29e9afa903569efad0eb7c886
+
+meta::function('push-state', <<'__ba601ddf7dce874ce79dd37a936ffdcc');
 push @{$transient{'states'} = $transient{'states'} || []}, {%data};
 my $state_count = scalar @{$transient{'states'}};
 "There are now $state_count states on the stack.";
-__ik0ofu7R8gHAKSmMjek79V+yfgdjdK5Jmtwf7h8SpJk
+__ba601ddf7dce874ce79dd37a936ffdcc
 
-meta::function('reload', <<'__GwQjnnfuj0xQlervDJ9EVWzdmdz+XL3Gq0i9rdejvzM');
-execute($_) for (grep {! (/^internal::/ || /^bootstrap::/)} keys %data);
-__GwQjnnfuj0xQlervDJ9EVWzdmdz+XL3Gq0i9rdejvzM
+meta::function('reload', 'execute($_) for grep ! (/^internal::/ || /^bootstrap::/), keys %data;');
+meta::function('render', <<'__ccb26db43115329651cc3c0527a3e849');
+use File::Copy 'copy';
+compile();
+copy(&{'pdf-output-file'}(), &{'source-directory'}() . '/' . name() . '.pdf') or die "Copy failed: $!";
+__ccb26db43115329651cc3c0527a3e849
 
-meta::function('repl', <<'__w4q9MpioWHnb4gpiwN2R0N69hoQm0kvxzUBS6knEULg');
-my ($name, @options) = @_;
-
-use Term::ReadLine;
-
-my $term = new Term::ReadLine "$0 repl for $name";
-$term->ornaments(0);
-my $OUT    = $term->OUT || \*STDOUT;
-my $prompt = &{'name'}() . "/$name> ";
-
-terminal::message('repl', 'initializing symbol table');
-types::clear_symbols();
-types::load_symbols($name) if $name;
-types::initialize_symbols();
-types::initialize_debugging_symbols() if grep /^debug$/, @options;
-
-terminal::message('repl', 'running session');
-run('cached-dependencies') unless grep /^nodeps$/, @options;
-run($name) if $name;
-
-terminal::message('repl', 'ready');
-while (defined ($_ = $term->readline($prompt))) {
-  my $result = eval {reader::read_form($_)->eval()->serialize()};
-  $@ ? chomp $@ && terminal::message('error', $@) : terminal::message('result', $result);
-}
-
-print "\n";
-if ($name) {
-  terminal::message('repl', 'storing symbol table');
-  types::store_symbols($name);
-}
-
-terminal::message('repl', 'exiting');
-__w4q9MpioWHnb4gpiwN2R0N69hoQm0kvxzUBS6knEULg
-
-meta::function('rm', <<'__7BVECTVo/mcT5+edC70WPc6S1xCbzAeyUCfCjkKWlww');
+meta::function('rm', <<'__963fdd3d9f6a0ba279b001b1f5679a38');
 for my $to_be_deleted (@_) {
-  messages::warning("$to_be_deleted does not exist") unless grep {$_ eq $to_be_deleted} keys %data;
+  terminal::message('warning', "$to_be_deleted does not exist") unless exists $data{$to_be_deleted};
 }
 
 delete @data{@_};
-__7BVECTVo/mcT5+edC70WPc6S1xCbzAeyUCfCjkKWlww
+__963fdd3d9f6a0ba279b001b1f5679a38
 
-meta::function('run', <<'__2RluS4s8uRjHD6Vtfi/a01P+Bo8jgpcLILqPCD4icpU');
-shell::load_interactively(@_);
-__2RluS4s8uRjHD6Vtfi/a01P+Bo8jgpcLILqPCD4icpU
-
-meta::function('run-file', <<'__WceprRaNezbwObGfB9h6pwi0Ly281gdWz8CLtXL1ehY');
-shell::initialize_symbol_table();
-&{':main'}();
-shell::load_from_file(@_);
-__WceprRaNezbwObGfB9h6pwi0Ly281gdWz8CLtXL1ehY
-
-meta::function('save', <<'__uWXGnrQr+A7Cl0zcsDuiokbWAw1XdMdjeq9gDcTMJIw');
-my $serialized_data = serialize();
-my $final_state     = state();
-
-my (undef, $temporary_filename) = tempfile("$0." . 'X' x 32, OPEN => 0);
-file::write($temporary_filename, $serialized_data);
-chmod 0700, $temporary_filename;
-
-my $observed_state = `perl $temporary_filename state`;
-chomp $observed_state;
-if ($observed_state ne $final_state) {
-  messages::error("The state of this object ($final_state) is inconsistent with the state of $temporary_filename ($observed_state).\n" .
-                  "$0 has not been updated.");
+meta::function('save', <<'__ca9ab587c78ff2024ef9ad8ca634db5b');
+if (! verify()) {
+  die "$0 has not been updated";
 } else {
+  my $serialized_data = serialize();
   eval {file::write($0, $serialized_data)};
-  warn $@ if $@;
-  my $observed_self_state = `perl $0 state`;
-  chomp $observed_self_state;
-  unlink $temporary_filename if $observed_self_state eq $final_state;
+  die $@ if $@;
+  terminal::message('info', "$0 saved successfully.");
 }
-__uWXGnrQr+A7Cl0zcsDuiokbWAw1XdMdjeq9gDcTMJIw
+__ca9ab587c78ff2024ef9ad8ca634db5b
 
-meta::function('serialize', <<'__KGiI48MlyG6RAVW5QYRK8y97y8tx+jeAwPlY5eDtMTw');
-my @keys_without_internals = grep(!/^internal::/, sort keys %data);
-join "\n", $data{'bootstrap::initialization'},
-           (grep {$_} (map {serialize::single(@_)} grep(/^meta::/,  @keys_without_internals),
-                                                   grep(!/^meta::/, @keys_without_internals),
-                                                   grep(/^internal::/, sort keys %data))),
-           "__END__";
-__KGiI48MlyG6RAVW5QYRK8y97y8tx+jeAwPlY5eDtMTw
+meta::function('save-state', <<'__5c5b586331e25951140ced6442d9fe2b');
+# Creates a named copy of the current state and stores it.
+my ($state_name) = @_;
+associate("state::$state_name", &{'current-state'}(), execute => 1);
+__5c5b586331e25951140ced6442d9fe2b
 
-meta::function('shell', <<'__mzNaDzdnJhpI/Va1/nY8LTN9BQtfr77CFKIeK2GdIC0');
+meta::function('serialize', <<'__d7b3affaece3a36d5cfc051b88a5b76e');
+my $criteria               = join '|', @_;
+
+my @matching_keys          = grep length && (! $criteria || m/$criteria/), sort keys %data;
+my @keys_without_internals = grep ! /^internal::/, @matching_keys;
+
+my @matching_attributes    = map serialize_single($_), grep(/^meta::/,     @keys_without_internals),
+                                                       grep(! /^meta::/,   @keys_without_internals),
+                                                       grep(/^internal::/, @matching_keys);
+
+my @final_array            = $criteria ? @matching_attributes : (retrieve('bootstrap::initialization'), @matching_attributes, '__END__');
+
+terminal::message('info', "No attributes matched $criteria") unless @final_array;
+join "\n", @final_array;
+__d7b3affaece3a36d5cfc051b88a5b76e
+
+meta::function('serialize_single', <<'__91663f820a05ff4029a200fbfd7285bc');
+# Serializes a single attribute and optimizes for content.
+
+my $name               = $_[0] || $_;
+my $contents           = $data{$name};
+my $meta_function_name = 'meta::' . namespace($name);
+my $invocation_name    = basename($name);
+
+return "$meta_function_name('$invocation_name', '$contents');"   if $contents =~ /^[^\n']*$/;
+return "$meta_function_name('$invocation_name', \"$contents\");" if $contents =~ /^[^\n"\\\$@%&]*$/;
+
+my $delimiter = '__' . fast_hash($contents);
+return "$meta_function_name('$invocation_name', <<'$delimiter');\n$contents\n$delimiter\n";
+__91663f820a05ff4029a200fbfd7285bc
+
+meta::function('shell', <<'__c6ef6c31734c0b330f6076543fef8f1f');
 use Term::ReadLine;
 
 my $term = new Term::ReadLine "$0 shell";
 $term->ornaments(0);
-my $prompt = &{'name'}() . '$ ';
-my $OUT = $term->OUT || \*STDOUT;
+my $prompt = name() . '$ ';
+my $output = $term->OUT || \*STDOUT;
 
 $term->Attribs->{attempted_completion_function} = \&complete;
 
@@ -806,104 +696,139 @@ while (defined ($_ = $term->readline($prompt))) {
 
   if ($function_name) {
     if ($externalized_functions{$function_name}) {
-      my $result = eval {&{$function_name}(@args)};
-      messages::warning($@) if $@;
-      chomp $result;
-      print $OUT $result, "\n" unless $@;
+      chomp(my $result = eval {&$function_name(@args)});
+      terminal::message('error', translate_backtrace($@)) if $@;
+      print $output $result, "\n" unless $@;
     } else {
-      messages::warning("Command not found: $function_name");
+      terminal::message('warning', "Command not found: '$function_name' (use 'ls' to see available commands)");
     }
   }
 
-  for my $watch (@{$transient{'watch_list'}}) {
-    print $OUT eval($watch), "\n";
-    print $OUT "Error evaluating watched expression $watch: $@\n" if $@;
+  if (watching()) {
+    for (grep /^watch::/, sort keys %data) {
+      my $watch = retrieve($_);
+      terminal::message('watch', "$_ => " . meta::eval_in($watch, $_));
+    }
   }
 
-  $prompt = &{'name'}() . '$ ';
+  $prompt = name() . '$ ';
 }
-__mzNaDzdnJhpI/Va1/nY8LTN9BQtfr77CFKIeK2GdIC0
+__c6ef6c31734c0b330f6076543fef8f1f
 
-meta::function('size', <<'__lDGr6yVnDwcDWLkJH16MNukltjG2ypBSk/ktYb80h80');
-length(serialize());
-__lDGr6yVnDwcDWLkJH16MNukltjG2ypBSk/ktYb80h80
-
-meta::function('snapshot', <<'__qjqsCy4CTt88dIi7IWM+Varpb3GcHsYrFTxW7EwpLW0');
+meta::function('size', 'length(serialize());');
+meta::function('snapshot', <<'__ccb6335f4837338be1d73ccc5f81973d');
 my ($name) = @_;
 file::write(my $finalname = state_based_filename($name), serialize(), noclobber => 1);
 chmod 0700, $finalname;
-__qjqsCy4CTt88dIi7IWM+Varpb3GcHsYrFTxW7EwpLW0
 
-meta::function('state', <<'__1S8nzRSMoxJU/VEv2rx/NrAt1iRgXQ9ugxjUP3IFunI');
-sha256_base64 serialize();
-__1S8nzRSMoxJU/VEv2rx/NrAt1iRgXQ9ugxjUP3IFunI
+terminal::message('state', "Created snapshot at $finalname.");
+__ccb6335f4837338be1d73ccc5f81973d
 
-meta::function('unlit', <<'__4zPHXwlGFrTN0OAvy0k5UFlrLmXg6SUA8aJM9GyFDko');
-join "\n\n", map {m/^\s*[^0-9a-z_()\[\]{}!\/ ]/o ? s/^/\/\/ /omg : s/^(\s*)!/\1 /o; $_} split /\n\n+/, code(@_);
-__4zPHXwlGFrTN0OAvy0k5UFlrLmXg6SUA8aJM9GyFDko
+meta::function('state', <<'__e17520e3a5d81d788ae995fd8ac47cb9');
+my @keys = sort keys %data;
+my $hash = fast_hash(scalar @keys);
+$hash = fast_hash($hash . join '|', @keys);
+$hash = fast_hash("$data{$_}|$hash") for @keys;
+$hash;
+__e17520e3a5d81d788ae995fd8ac47cb9
 
-meta::function('unlock', <<'__08PohCY8fcNe+pWCO6ic6XOOKv48NkrxpNMmTOUIFdA');
+meta::function('tex', <<'__5bb8bf491e1b442858096acf711135f9');
+my ($document) = @_;
+$document ||= 'main';
+preprocess(retrieve("section::$document"));
+__5bb8bf491e1b442858096acf711135f9
+
+meta::function('unlock', <<'__b1bdb7eb224487f5bfd439ebb997c823');
 my (undef, undef, $mode) = stat $0;
 chmod $mode | 0200, $0;
-__08PohCY8fcNe+pWCO6ic6XOOKv48NkrxpNMmTOUIFdA
+__b1bdb7eb224487f5bfd439ebb997c823
 
-meta::function('update-from', <<'__jJ2tfSk/Quz8/1PiYxIwQjBRt/hYg51iJhAdxcdaHkM');
-# Upgrade all attributes that aren't customized. In this case, we want everything except for configuration::, code::, and attribute::.
-return "That is a really bad idea." if $0 =~ /\.\/(.*)/ && $_[0] eq $1 || $_[0] eq $0;
+meta::function('update-from', <<'__0b818ed9847d1238b8eaaea8e8c4e581');
+# Upgrade all attributes that aren't customized. Customization is defined when the data type is created,
+# and we determine it here by checking for $transients{inherit}{$type}.
 
-my @attributes = map {s/\s+.*//; $_} split(/\n/, qx|$_[0] ls-a|);
+my $target  = $_[0] or die 'Must specify another script to pull data from.';
+my @options = grep /^-/, @_;
 
-terminal::message('info', 'Replicating state...');
-&{'push-state'}();
+&{'save-state'}('before-update');
+
 terminal::message('info', 'Updating meta attributes...');
-for my $attribute (grep length && /^meta::/, @attributes) {
-  associate($attribute, join('', qx|$_[0] cat $attribute|));
-  reload();
-  print '.';
-}
+eval qx($target serialize '^meta::');
+terminal::message('warning', $@) if $@;
+terminal::message('warning', 'One of the meta-attributes triggered a verification failure.') unless verify();
 
-print "\n";
 terminal::message('info', 'Updating non-meta attributes...');
-for my $attribute (grep length && ! (/^configuration::/ || /^code::/ || /^attribute::/ || /^function::pop-state$/ ||
-                                     /^list::/ || /^issue::/ || /^data::/ || /^meta::datatypes/), @attributes) {
-  associate($attribute, join('', qx|$_[0] cat $attribute|));
-  reload();     # Necessary to activate new datatypes.
-  print '.';
-}
-
-print "\n";
-terminal::message('info', 'Reloading new configuration');
+my $combined_pattern = join '|', map "^${_}::", grep ! (/^meta$/ || /^internal$/) && $transient{inherit}{$_}, sort keys %{$transient{inherit}};
+eval qx($target serialize '$combined_pattern');
+terminal::message('warning', $@) if $@;
 reload();
-terminal::message('info', "Imported from $_[0]. Run pop-state to undo this change.");
-__jJ2tfSk/Quz8/1PiYxIwQjBRt/hYg51iJhAdxcdaHkM
 
-meta::function('usage', <<'__7ReV+2xSkKaDnXAdgszTEQyeJETOBChyE/THZJIifMs');
+if (verify()) {
+  terminal::message('info', "Successfully updated from $_[0]. Run 'load-state before-update' to undo this change.");
+} elsif (grep /^--force$/o || /^-f$/o, @options) {
+  terminal::message('warning', 'The object failed verification, but the failure state has been kept because --force was specified.');
+  terminal::message('warning', 'At this point your object will not save properly, though backup copies will be created.');
+  terminal::message('info',    'Run "load-state before-update" to undo the update and return to a working state.');
+} else {
+  terminal::message('error', 'Verification failed after the upgrade was complete.');
+  terminal::message('info',  "$0 has been reverted to its pre-upgrade state.");
+  terminal::message('info',  "If you want to upgrade and keep the failure state, then run 'update-from $target --force'.");
+  &{'load-state'}('before-update');
+}
+__0b818ed9847d1238b8eaaea8e8c4e581
+
+meta::function('usage', <<'__234b1da5bb4e34d72a932ab68aad5052');
 <<"EOD" . ls ();
-Usage: $0 [options] action [arguments]
+Usage: $0 action [arguments]
 Defined actions (and the attribute that defines them):
 EOD
-__7ReV+2xSkKaDnXAdgszTEQyeJETOBChyE/THZJIifMs
+__234b1da5bb4e34d72a932ab68aad5052
 
-meta::function('vim', <<'__1EcCMR8Tks8HBoOg+zAKJ4LlrRIY8nvLs4M1VTr2Zec');
+meta::function('verify', <<'__e8ff828f42cdc7d759b70bb81721ddb6');
+my $serialized_data = serialize();
+my $state           = state();
+
+my $temporary_filename = temporary_name();
+$transient{temporary_filename} = $temporary_filename;
+file::write($temporary_filename, $serialized_data);
+chmod 0700, $temporary_filename;
+
+chomp(my $observed_state = join '', qx|perl '$temporary_filename' state|);
+
+my $result = $observed_state eq $state;
+unlink $temporary_filename if $result;
+terminal::message('error', "Verification failed; '$observed_state' (produced by $temporary_filename) != '$state' (expected)") unless $result;
+
+$result;
+__e8ff828f42cdc7d759b70bb81721ddb6
+
+meta::function('view', <<'__72064117780244bd9dd38659573b9f2c');
+my $pdf_reader      = &{'pdf-reader'}();
+my $pdf_output_file = &{'pdf-output-file'}();
+chomp $pdf_reader;
+system("$pdf_reader '$pdf_output_file'");
+__72064117780244bd9dd38659573b9f2c
+
+meta::function('vim', <<'__bd231af998c353790253bc6660be0b90');
 # Installs VIM highlighters.
-file::write("$ENV{'HOME'}/.vim/syntax/$_.vim", retrieve("vim_highlighter::$_")) for map {s/^vim_highlighter:://o; $_} grep /^vim_highlighter::/, sort keys %data;
-__1EcCMR8Tks8HBoOg+zAKJ4LlrRIY8nvLs4M1VTr2Zec
+file::write("$ENV{'HOME'}/.vim/syntax/$_.vim", retrieve("vim_highlighter::$_")) for grep s/^vim_highlighter:://o, keys %data;
+__bd231af998c353790253bc6660be0b90
 
-meta::internal_function('associate', <<'__D8BKmEFp/adiPPqPnXyMOzlsBMCmuZi62UpJWdoFg/0');
+meta::internal_function('associate', <<'__80f0728190bf3b0d4c94807cfdc12a22');
 my ($name, $value, %options) = @_;
 my $namespace = namespace($name);
-messages::error("Namespace $namespace does not exist") unless grep {$_ eq $namespace} @data_types;
+die "Namespace $namespace does not exist" unless $datatypes{$namespace};
 $data{$name} = $value;
 execute($name) if $options{'execute'};
-__D8BKmEFp/adiPPqPnXyMOzlsBMCmuZi62UpJWdoFg/0
+__80f0728190bf3b0d4c94807cfdc12a22
 
-meta::internal_function('basename', <<'__T4JEqOUYjMzssdVwV/rdgAhvr0Vz9TQUo0noTdeBLxw');
+meta::internal_function('basename', <<'__62efb9f22157835940af1d5feae98d98');
 my ($name) = @_;
 $name =~ s/^[^:]*:://;
 $name;
-__T4JEqOUYjMzssdVwV/rdgAhvr0Vz9TQUo0noTdeBLxw
+__62efb9f22157835940af1d5feae98d98
 
-meta::internal_function('complete', <<'__lhlD80z2kvEUEeHPqLFw6JE8xUdXr6J5Q1gXHg4beHg');
+meta::internal_function('complete', <<'__f14ae2337c0653b6bb6fd02bb6493646');
 my @functions  = sort keys %externalized_functions;
 my @attributes = sort keys %data;
 
@@ -936,98 +861,149 @@ if ($line =~ / /) {
   # Start of line, so it's a function.
   match ($text, @functions);
 }
-__lhlD80z2kvEUEeHPqLFw6JE8xUdXr6J5Q1gXHg4beHg
+__f14ae2337c0653b6bb6fd02bb6493646
 
-meta::internal_function('execute', <<'__Ge94WTpmLuqsMDappj5G/G2BKILAE0GjeCqAeHLW6fQ');
+meta::internal_function('debug_trace', <<'__f887289259890731458a66398b628cdc');
+quiet() or terminal::message('debug', join ', ', @_);
+wantarray ? @_ : $_[0];
+__f887289259890731458a66398b628cdc
+
+meta::internal_function('execute', <<'__2d5b6f18c13943d6a0de15e9c348d428');
 my ($name, %options) = @_;
 my $namespace = namespace($name);
 eval {&{"meta::$namespace"}(basename($name), retrieve($name))};
 warn $@ if $@ && $options{'carp'};
-__Ge94WTpmLuqsMDappj5G/G2BKILAE0GjeCqAeHLW6fQ
+__2d5b6f18c13943d6a0de15e9c348d428
 
-meta::internal_function('file::read', <<'__ZxBqZsMZZRuLMQp8Sy//ZsoAvriDebjYLGAX7p7AxXg');
+meta::internal_function('fast_hash', <<'__ac70f469e697725cfb87629833434ab1');
+my ($data)     = @_;
+my $piece_size = length($data) >> 3;
+
+my @pieces     = (substr($data, $piece_size * 8) . length($data), map(substr($data, $piece_size * $_, $piece_size), 0 .. 7));
+my @hashes     = (fnv_hash($pieces[0]));
+
+push @hashes, fnv_hash($pieces[$_ + 1] . $hashes[$_]) for 0 .. 7;
+
+$hashes[$_] ^= $hashes[$_ + 4] >> 16 | ($hashes[$_ + 4] & 0xffff) << 16 for 0 .. 3;
+$hashes[0]  ^= $hashes[8];
+
+sprintf '%08x' x 4, @hashes[0 .. 3];
+__ac70f469e697725cfb87629833434ab1
+
+meta::internal_function('file::read', <<'__186bbcef8f6f0dd8b72ba0fdeb1de040');
 my $name = shift;
 open my($handle), "<", $name;
 my $result = join "", <$handle>;
 close $handle;
 $result;
-__ZxBqZsMZZRuLMQp8Sy//ZsoAvriDebjYLGAX7p7AxXg
+__186bbcef8f6f0dd8b72ba0fdeb1de040
 
-meta::internal_function('file::write', <<'__+NhpMabvNL+hHZaTZwBoFx2IFa79cjOZwGxEXX+xG0o');
+meta::internal_function('file::write', <<'__2bb0595e24631c2cace8ee5ec8194285');
+use File::Path 'mkpath';
+use File::Basename 'dirname';
+
 my ($name, $contents, %options) = @_;
-die "Choosing not to overwrite file $name" if $options{'noclobber'} && -f $name;
-open my($handle), ">", $name or die "Can't open $name for writing";
+die "Choosing not to overwrite file $name" if $options{noclobber} && -f $name;
+mkpath(dirname($name)) if $options{mkpath};
+
+open my($handle), $options{append} ? '>>' : '>', $name or die "Can't open $name for writing";
 print $handle $contents;
 close $handle;
-__+NhpMabvNL+hHZaTZwBoFx2IFa79cjOZwGxEXX+xG0o
+__2bb0595e24631c2cace8ee5ec8194285
 
-meta::internal_function('invoke_editor_on', <<'__97Lgs5+qfyAu92Vv5GCVVSYgUgFhOKYkVYXlbWoUs6U');
+meta::internal_function('fnv_hash', <<'__8d001a3a7988631bab21a41cee559758');
+# A rough approximation to the Fowler-No Voll hash. It's been 32-bit vectorized
+# for efficiency, which may compromise its effectiveness for short strings.
+
+my ($data) = @_;
+
+my ($fnv_prime, $fnv_offset) = (16777619, 2166136261);
+my $hash                     = $fnv_offset;
+my $modulus                  = 2 ** 32;
+
+$hash = ($hash ^ ($_ & 0xffff) ^ ($_ >> 16)) * $fnv_prime % $modulus for unpack 'L*', $data . substr($data, -4) x 8;
+$hash;
+__8d001a3a7988631bab21a41cee559758
+
+meta::internal_function('invoke_editor_on', <<'__7c798760d79429e5b52d9fa934e889d8');
 my ($data, %options) = @_;
-my $content_hash     = sha256_base64($data);
-my $editor           = $options{'editor'} || $ENV{'VISUAL'} || $ENV{'EDITOR'} ||
-                       messages::error('Either the $VISUAL or $EDITOR environment variable should be set to a valid editor.');
-my $options          = $options{'options'} || $ENV{'VISUAL_OPTS'} || $ENV{'EDITOR_OPTS'} || '';
-my $extension        = $options{'extension'} || '';
+my $editor           = $options{editor} || $ENV{VISUAL} || $ENV{EDITOR} ||
+                       die 'Either the $VISUAL or $EDITOR environment variable should be set to a valid editor';
+my $options          = $options{options} || $ENV{VISUAL_OPTS} || $ENV{EDITOR_OPTS} || '';
+my $extension        = $options{extension} || '';
+my $attribute        = $options{attribute} || '';
 
-my (undef, $filename) = tempfile("$0." . ("X" x 32), OPEN => 0);
-$filename .= $extension;
+my $filename         = temporary_name() . "-$attribute" . $extension;
 
 file::write($filename, $data);
-system("$editor $options \"$filename\"");
+system("$editor $options '$filename'");
 
 my $result = file::read($filename);
 unlink $filename;
 $result;
-__97Lgs5+qfyAu92Vv5GCVVSYgUgFhOKYkVYXlbWoUs6U
+__7c798760d79429e5b52d9fa934e889d8
 
-meta::internal_function('messages::error', <<'__200qXouilOAQNa4NkmIj6l+Rvb49Jpy8yxvIX29NcK4');
+meta::internal_function('messages::error', <<'__5af9120535afe26fa6828f477abe833c');
 my ($message) = @_;
-die "$message\n";
-__200qXouilOAQNa4NkmIj6l+Rvb49Jpy8yxvIX29NcK4
+terminal::message('error', $message);
+die;
+__5af9120535afe26fa6828f477abe833c
 
-meta::internal_function('messages::warning', <<'__DeU/1Klulk/y4fO+wtKt+liOmUKwCEYKM8BvtlXYXBc');
+meta::internal_function('messages::warning', <<'__2877a0b67326120f9d43089368e6c4f3');
 my ($message) = @_;
-print "$message\n";
-__DeU/1Klulk/y4fO+wtKt+liOmUKwCEYKM8BvtlXYXBc
+terminal::message('warning', $message);
+__2877a0b67326120f9d43089368e6c4f3
 
-meta::internal_function('namespace', <<'__D7UfKyyYZ1slZZyaS28hIt8a68jkI3ELBaddROXOHug');
+meta::internal_function('namespace', <<'__93213d60cafb9627e0736b48cd1f0760');
 my ($name) = @_;
 $name =~ s/::.*$//;
 $name;
-__D7UfKyyYZ1slZZyaS28hIt8a68jkI3ELBaddROXOHug
+__93213d60cafb9627e0736b48cd1f0760
 
-meta::internal_function('retrieve', <<'__Erqqkp11FEHKsitr0DEJZ6OCGDYAs+U6BSu4UvLvsFM');
-@data{@_};
-__Erqqkp11FEHKsitr0DEJZ6OCGDYAs+U6BSu4UvLvsFM
-
-meta::internal_function('serialize::single', <<'__lDBHaXpbrfER2envI2Ipy77IcdjUnlZou+rggaxsAWE');
-my $name               = shift || $_;
-my $contents           = $data{$name};
-my $delimiter          = "__" . sha256_base64 $contents;
-my $meta_function_name = "meta::" . namespace($name);
-my $invocation_name    = basename $name;
-"$meta_function_name('$invocation_name', <<'$delimiter');\n$contents\n$delimiter\n";
-__lDBHaXpbrfER2envI2Ipy77IcdjUnlZou+rggaxsAWE
-
-meta::internal_function('state_based_filename', <<'__zNSrihAkMKJG5spRYgcFdoNArFKig1u12gIp6gJ8pZw');
+meta::internal_function('retrieve', '@data{@_};');
+meta::internal_function('state_based_filename', <<'__218815c285975367ae0324bf5c3f5409');
 my ($name) = @_;
 my $noise  = $name || state();
 $noise =~ s/\//-/g;
 "$0.$noise";
-__zNSrihAkMKJG5spRYgcFdoNArFKig1u12gIp6gJ8pZw
+__218815c285975367ae0324bf5c3f5409
 
-meta::library('terminal', <<'__pvD00lNNeQAXRGZFRNjR0bf9b/Z/rZgMgNL5zN4ZsQA');
+meta::internal_function('table_display', <<'__4ac28dc593ac17fd17b6573c07b43e4e');
+# Displays an array of arrays as a table; that is, with alignment. Arrays are
+# expected to be in column-major order.
+
+sub maximum_length_in {
+  my $maximum = 0;
+  length > $maximum and $maximum = length for @_;
+  $maximum;
+}
+
+my @arrays    = @_;
+my @lengths   = map maximum_length_in(@$_), @arrays;
+my @row_major = map {my $i = $_; [map $$_[$i], @arrays]} 0 .. $#{$arrays[0]};
+my $format    = join '  ', map "%-${_}s", @lengths;
+
+join "\n", map sprintf($format, @$_), @row_major;
+__4ac28dc593ac17fd17b6573c07b43e4e
+
+meta::internal_function('temporary_name', <<'__0fb1402061581b69822f913631b4a9d9');
+use File::Temp 'tempfile';
+my (undef, $temporary_filename) = tempfile("$0." . 'X' x 4, OPEN => 0);
+$temporary_filename;
+__0fb1402061581b69822f913631b4a9d9
+
+meta::internal_function('translate_backtrace', <<'__06fad3d85833a6484e426401b95e0206');
+my ($trace) = @_;
+$trace =~ s/\(eval (\d+)\)/$locations{$1 - 1}/g;
+$trace;
+__06fad3d85833a6484e426401b95e0206
+
+meta::library('terminal', <<'__6999988eaf441c9b1282e03e1db427b5');
 # Functions for nice-looking terminal output.
-
 package terminal;
 
-my %color_conversions = (black  => "0;0",
-                         red    => "1;31",
-                         yellow => "1;33",
-                         green  => "1;32",
-                         blue   => "1;34",
-                         purple => "1;35",
-                         cyan   => "1;36");
+my %color_conversions = (black  => "0;0", red  => "1;31", yellow => "1;33", green => "1;32",
+                                          blue => "1;34", purple => "1;35", cyan  => "1;36");
 my $longest_prefix = 0;
 my %default_colors = ();
 
@@ -1039,44 +1015,102 @@ sub color {
 color    'info',  'green';
 color  'status',  'green';
 color   'error',    'red';
+color   'debug',   'blue';
 color 'warning', 'yellow';
 
 sub message {
   my ($prefix, $message) = @_;
   my $color = $color_conversions{$default_colors{$prefix}};
   my $padding = ' ' x ($longest_prefix - length $prefix);
-  print STDERR "${padding}[\033[${color}m$prefix\033[0;0m] $message\n";
+
+  return if ::quiet() and $default_colors{$prefix} eq 'green';
+  print STDERR "${padding}\[\033[${color}m$prefix\033[0;0m] $message\n";
 }
-__pvD00lNNeQAXRGZFRNjR0bf9b/Z/rZgMgNL5zN4ZsQA
+__6999988eaf441c9b1282e03e1db427b5
 
-meta::list('dependencies', <<'__PCX6Rw3B+yj+uquKT62+0hpgxedSeTDpHPYggYC5bE8');
-# No dependencies
-__PCX6Rw3B+yj+uquKT62+0hpgxedSeTDpHPYggYC5bE8
+meta::message_color('state', 'purple');
+meta::message_color('states', 'yellow');
+meta::message_color('watch', 'blue');
+meta::resource('header', <<'__efe6254be4f73fb4170ab1980a1888d5');
+- include resource::header-packages
+- include resource::header-listings
 
-meta::sh('js', <<'__qGEHHjKcAKXQz3fhJNhOtnWH3pjzV5E13Ndz4KxZrvs');
-js __code__
-__qGEHHjKcAKXQz3fhJNhOtnWH3pjzV5E13Ndz4KxZrvs
+- include resource::header-refs
 
-meta::sh('node', <<'__SSgRGyOQPbEleu+2TMjU4OCmMnjOWFSaJj0iwGkBsug');
-node __code__
-__SSgRGyOQPbEleu+2TMjU4OCmMnjOWFSaJj0iwGkBsug
+- include resource::header-languages
+- include resource::header-resource
+__efe6254be4f73fb4170ab1980a1888d5
 
-meta::sh('node-repl', <<'__q9vTbSQ20/rHKteKvyoqfWOUHbXPrRXR8WvCi2vaMDY');
-node-repl __code__
-__q9vTbSQ20/rHKteKvyoqfWOUHbXPrRXR8WvCi2vaMDY
+meta::resource('header-languages', <<'__637a18cf607b727dec3feab552be05e2');
+\lstnewenvironment{asmcode}       {}{}
+\lstnewenvironment{cppcode}       {\lstset{language=c++}}{}
+\lstnewenvironment{javacode}      {\lstset{language=java}}{}
+\lstnewenvironment{javascriptcode}{}{}
+\lstnewenvironment{htmlcode}      {\lstset{language=html}}{}
+__637a18cf607b727dec3feab552be05e2
 
-meta::sh('repl', <<'__hpfIOvOFVwSLotcBcirerUZLwIeNISkgfqy8K01Nbk8');
-js -f __code__ -f -
-__hpfIOvOFVwSLotcBcirerUZLwIeNISkgfqy8K01Nbk8
+meta::resource('header-listings', <<'__747e2e3bc83de0d564ec96e91395fa84');
+\definecolor{gray}{rgb}{0.6,0.6,0.6}
 
-meta::sh('stats', <<'__e/Rj98I2/T+yRRdecrhlw5H3dWmBW2Vup15b2cbzKLg');
-echo $(cat __code__ | grep -v '//' | grep -v '^\s*$' | wc -l) LOC, \
-     $(cat __code__ | grep '//' | wc -l) comment lines, \
-     $(cat __code__ | grep '^\s*$' | wc -l) whitespace lines
-__e/Rj98I2/T+yRRdecrhlw5H3dWmBW2Vup15b2cbzKLg
+\usepackage{caption}
+\DeclareCaptionFormat{listing}{\llap{\color{gray}#1\hspace{10pt}}\tt{}#3}
+\captionsetup[lstlisting]{format=listing, singlelinecheck=false, margin=0pt, font={bf}}
 
-meta::vim_highlighter('ljs', <<'__EELq7R8BHu1htK8/oKRUrIUWVVYqdfaJgsvdyUimtss');
-" Literate JavaScript | Spencer Tipping <spencer@spencertipping.com>
+\lstset{columns=fixed,basicstyle={\tt},numbers=left,basewidth=0.5em,showstringspaces=false,numberstyle={\color{gray}\scriptsize}}
+__747e2e3bc83de0d564ec96e91395fa84
+
+meta::resource('header-packages', <<'__f69baadb1d3ce11744003b174c91b34b');
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,pxfonts,listings,color}
+\usepackage[colorlinks]{hyperref}
+__f69baadb1d3ce11744003b174c91b34b
+
+meta::resource('header-refs', '\newcommand{\Ref}[2]{\hyperref[#2]{#1 \ref*{#2}}}');
+meta::resource('header-resource', '\lstnewenvironment{resourcecode}{}{}');
+meta::section('introduction', <<'__ea2e91bda0cea5bd0f6cccf8973d51f8');
+- s1 Introduction | sec:introduction
+  Divergence is a JavaScript library designed to generate and manipulate functions. It provides some low-level code optimization by enabling compact notation for routine things such as
+  mapping, but it also provides a full JavaScript parser to decompile functions and implement systematic transformations. This can be useful when debugging, for example.
+__ea2e91bda0cea5bd0f6cccf8973d51f8
+
+meta::section('main', <<'__a61b22905685b4c5e0dcfe85cf37e7ef');
+- documentclass article
+- include resource::header
+
+- title  Divergence
+- author Spencer Tipping
+
+- document << end
+  - maketitle
+  - tableofcontents
+  
+  - include section::introduction
+- end
+__a61b22905685b4c5e0dcfe85cf37e7ef
+
+meta::template('eval', <<'__7be1d470a07a06c58e971bc7fc24c048');
+my $result = eval $_[0];
+terminal::message('warning', "Error during template evaluation: $@") if $@;
+$result;
+__7be1d470a07a06c58e971bc7fc24c048
+
+meta::template('failing_conditional', <<'__b49f2ffe1cfefb36b1eabd7abd7b3bb6');
+my ($commands)    = @_;
+my $should_return = $commands =~ / if (.*)$/ && ! eval $1;
+terminal::message('warning', "eval of template condition failed: $@") if $@;
+$should_return;
+__b49f2ffe1cfefb36b1eabd7abd7b3bb6
+
+meta::template('include', <<'__e0624844a65ae41e0217dd871fc0dbfb');
+my ($commands) = @_;
+return '' if template::failing_conditional($commands);
+join "\n", map retrieve($_), split /\s+/, $commands;
+__e0624844a65ae41e0217dd871fc0dbfb
+
+meta::vim_highlighter('cltex', <<'__10c051872325bda001b9653451009c65');
+" Cleaner TeX
+" Maintainer: Spencer Tipping <spencer@spencertipping.com>
+" Language:   Cleaner TeX (a variant of LaTeX with support for a bunch of embedded languages)
 
 if version < 600
   syntax clear
@@ -1084,42 +1118,51 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn include @javascript syntax/javascript.vim
+syn match   cltEofMarker  /<<\s*\w\+/ contained
+syn match   cltLine       /^\s*- .*$/ contains=cltEofMarker
 
-syn match ljsGetDirective /::\s*get\s.*$/     contained
-syn cluster directives add=ljsGetDirective
+syn include @cpp          syntax/cpp.vim        | unlet b:current_syntax
+syn include @java         syntax/java.vim       | unlet b:current_syntax
+syn include @asm          syntax/asm.vim        | unlet b:current_syntax
+syn include @javascript   syntax/javascript.vim | unlet b:current_syntax
+syn include @html         syntax/html.vim       | unlet b:current_syntax
 
-syn case match
-syn region lCodeRegion    start=/^\s*[\/!0-9a-z_()\[\]{}'"]/   end=/^$/ contains=@javascript transparent fold
-syn region lCommentRegion start=/^\s*[^\/!0-9a-z_()\[\]{}'" ]/ end=/^$/ contains=@directives fold
+syn region  cltCpp        matchgroup=cltCode start=/^\s*- cpp .*<<\s*\z(\w\+\)$/        end=/^\s*- \z1$/ contains=@cpp
+syn region  cltJava       matchgroup=cltCode start=/^\s*- java .*<<\s*\z(\w\+\)$/       end=/^\s*- \z1$/ contains=@java
+syn region  cltAsm        matchgroup=cltCode start=/^\s*- asm .*<<\s*\z(\w\+\)$/        end=/^\s*- \z1$/ contains=@asm
+syn region  cltJavascript matchgroup=cltCode start=/^\s*- javascript .*<<\s*\z(\w\+\)$/ end=/^\s*- \z1$/ contains=@javascript
+syn region  cltHtml       matchgroup=cltCode start=/^\s*- html .*<<\s*\z(\w\+\)$/       end=/^\s*- \z1$/ contains=@html
 
-hi link lCommentRegion  comment
-hi link ljsGetDirective special
+syn region  cltResource   matchgroup=cltCode start=/^\s*- resource .*<<\s*\z(\w\+\)$/   end=/^\s*- \z1$/
 
-set foldmethod=syntax
+syn cluster cltStuff      add=cltCpp,cltJava,cltAsm,cltJavascript,cltHtml,cltResource,cltVerbatim,cltLine
 
-let b:current_syntax = "ljs"
-__EELq7R8BHu1htK8/oKRUrIUWVVYqdfaJgsvdyUimtss
+syn region  cltDocument   start=/\%^/ end=/\%$/ contains=@cltStuff
 
-meta::internal('runtime', <<'__YPmIzwZkTg8URmPfjiwGRG4VDUF2ZCJqTEz+gjETYLQ');
-my $initial_state = sha256_base64 serialize();
+hi link cltLine           Special
+hi link cltKeyword        String
+hi link cltResource       String
 
-push @script_args, shift @ARGV while @ARGV && $ARGV[0] =~ /^-/;
+hi link cltCode           Special
+hi link cltDocument       Comment
 
-my $default_action = retrieve('data::default-action');
-chomp $default_action;
+let b:current_syntax = "cltex"
+__10c051872325bda001b9653451009c65
+
+meta::internal('runtime', <<'__487b99b3af6056d1d1c0e00dd4aef707');
+my $initial_state        = state();
+chomp(my $default_action = retrieve('data::default-action'));
+
 my $function_name = shift(@ARGV) || $default_action || 'usage';
 $function_name = 'usage' unless $externalized_functions{$function_name};
-my $result = &{$function_name}(@ARGV);
-chomp $result;
+
+chomp(my $result = &$function_name(@ARGV));
 print "$result\n" if $result;
 
 END {
-  my $serialized_data = serialize();
-  my $final_state     = sha256_base64 $serialized_data;
-  save() unless $initial_state eq $final_state;
+  save() unless $initial_state eq state();
 }
 
-__YPmIzwZkTg8URmPfjiwGRG4VDUF2ZCJqTEz+gjETYLQ
+__487b99b3af6056d1d1c0e00dd4aef707
 
 __END__
