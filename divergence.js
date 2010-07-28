@@ -16,7 +16,7 @@ var d = (function (eval_in_global_scope) {
                                          gensym: function    (s) {return 'gensym_' + (s || '') + (++gensym_count).toString(36)},
                                    macro_expand: function    (s) {return d.inline_macros.fold (function (s, m) {return m(s)}, s)},
                                           macro: function (r, f) {d.inline_macros.push (r.maps_to (f)); c = {}; return d},
-                                          trace: function    (x) {d.tracer && d.tracer (d.arr (arguments).join (', ')); return x}});
+                                          trace: function    (x) {d.tracer && d.tracer (arguments.length === 1 ? x : d.arr (arguments).join (', ')); return x}});
 
   d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
                          lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
@@ -58,7 +58,6 @@ var d = (function (eval_in_global_scope) {
         curry:  function (n) {var f = this.fn(); return n > 1 ? function () {var as = d.arr(arguments); return function () {return f.curry (n - 1).apply (this, as.concat (d.arr (arguments)))}} : f},
         proxy:  function (g) {var f = this.fn(); return g ? function () {return f.apply.apply (f, g.fn().apply (this, arguments))} : function () {return f.apply (this, arguments)}},
          bind:  function (x) {var f = this.fn(); return d.init (function () {return f.apply (x, arguments)}, {binding: x, original: f})},
-         type:  function  () {var f = function () {}, c = this.fn(); f = f.ctor.apply (f, arguments); return function () {return c.apply (new f(), arguments)}},
          ctor:  function  () {var g = function () {f.apply (this, arguments)}, f = g.original = this.fn(); d.init.apply (this, [g.prototype].concat (d.arr (arguments))); return g},
          tail: '[$_.fn(), arguments]'.fn(),
           cps:  function (c) {var cc = [this.fn(), [c = (c || d.id).fn().proxy()]]; while (cc[0] !== c) cc = cc[0].fn().apply (this, cc[1]); return c.apply (this, cc[1])},
