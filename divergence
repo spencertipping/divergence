@@ -80,7 +80,7 @@ sub meta::externalize_template {
 }
 __1e90e7ccb5fea1d498bbaaa6e7e43851
 
-meta::meta('functor::code-templates', <<'__d7c4de4adf3c7606453a118f75e73fd1');
+meta::meta('functor::code-templates', <<'__8438e73e45c87188c8b46d0c43eb4971');
 package code;
 
 # Templates for generating named source files.
@@ -92,12 +92,12 @@ sub template {
 
     $line =~ s/\s+.*$//o;
     file::write(&{'::source-directory'}() . "/$line", ($append && "\n") . $block, mkpath => 1, append => $append);
-    "\\lstset{caption=$line}\\begin{${name}code}\n$block \\end{${name}code}";
+    "\\lstset{caption={$line" . ($append && ' (continued)') . "},name={$line}}\\begin{${name}code}\n$block \\end{${name}code}";
   };
 
   meta::externalize_template $name, $implementation;
 }
-__d7c4de4adf3c7606453a118f75e73fd1
+__8438e73e45c87188c8b46d0c43eb4971
 
 meta::meta('functor::editable', <<'__e97984f7c34d9f06173be574e28c3f91');
 # An editable type. This creates a type whose default action is to open an editor
@@ -168,7 +168,8 @@ meta::define_form 'internal', \&meta::meta::implementation;
 __0172b18c9b9311477d2f6b8c16bb44c2
 
 meta::meta('template::code', 'code::template $_ for qw/java cpp asm javascript html resource/;');
-meta::meta('template::document', 'tex::template(tex::id(qw/document tableofcontents maketitle title author date abstract documentclass verbatim/));');
+meta::meta('template::document', 'tex::template tex::id(qw/document tableofcontents maketitle title author date abstract documentclass verbatim/);');
+meta::meta('template::enumeration', 'tex::template tex::id(qw/enumerate itemize item/);');
 meta::meta('template::math', "tex::template align => 'align*', nalign => 'align';");
 meta::meta('template::sections', <<'__0bf14cbc6a0e77d9b82dd185d8d8a9a0');
 tex::labeled_template(s1 => 'section', s2 => 'subsection', s3 => 'subsubsection', s4 => 'paragraph', s5 => 'subparagraph');
@@ -337,7 +338,7 @@ __3c6177256de0fddb721f534c3ad8c0ee
 
 meta::data('name', 'divergence');
 meta::data('output-dir', '/tmp');
-meta::data('pdf-output-file', '/tmp/divergence.1caaecd3bb5c74fd7a3d6704b8ac7900/document.pdf');
+meta::data('pdf-output-file', '/tmp/divergence.d83ee803211feaa833550e3ca86710d0/document.pdf');
 meta::data('pdf-reader', '/usr/bin/evince');
 meta::data('pdftex-command', 'pdflatex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
 meta::data('quiet', '1');
@@ -738,6 +739,7 @@ $document ||= 'main';
 preprocess(retrieve("section::$document"));
 __5bb8bf491e1b442858096acf711135f9
 
+meta::function('trim', 'wantarray ? map /^\s*(.*?)\s*$/o, @_ : ($_[0] =~ /^\s*(.*?)\s*$/o)[0];');
 meta::function('unlock', <<'__b1bdb7eb224487f5bfd439ebb997c823');
 my (undef, undef, $mode) = stat $0;
 chmod $mode | 0200, $0;
@@ -898,18 +900,18 @@ close $handle;
 $result;
 __186bbcef8f6f0dd8b72ba0fdeb1de040
 
-meta::internal_function('file::write', <<'__2bb0595e24631c2cace8ee5ec8194285');
-use File::Path 'mkpath';
+meta::internal_function('file::write', <<'__eb7b1efebe0db73378b0cce46681788d');
+use File::Path     'mkpath';
 use File::Basename 'dirname';
 
 my ($name, $contents, %options) = @_;
-die "Choosing not to overwrite file $name" if $options{noclobber} && -f $name;
+die "Choosing not to overwrite file $name" if $options{noclobber} and -f $name;
 mkpath(dirname($name)) if $options{mkpath};
 
 open my($handle), $options{append} ? '>>' : '>', $name or die "Can't open $name for writing";
 print $handle $contents;
 close $handle;
-__2bb0595e24631c2cace8ee5ec8194285
+__eb7b1efebe0db73378b0cce46681788d
 
 meta::internal_function('fnv_hash', <<'__8d001a3a7988631bab21a41cee559758');
 # A rough approximation to the Fowler-No Voll hash. It's been 32-bit vectorized
@@ -960,7 +962,11 @@ $name =~ s/::.*$//;
 $name;
 __93213d60cafb9627e0736b48cd1f0760
 
-meta::internal_function('retrieve', '@data{@_};');
+meta::internal_function('retrieve', <<'__0e9c1ae91f6cf6020cf1a05db7d51d72');
+my @results = map defined $data{$_} ? $data{$_} : file::read($_), @_;
+wantarray ? @results : $results[0];
+__0e9c1ae91f6cf6020cf1a05db7d51d72
+
 meta::internal_function('state_based_filename', <<'__218815c285975367ae0324bf5c3f5409');
 my ($name) = @_;
 my $noise  = $name || state();
@@ -1049,15 +1055,15 @@ meta::resource('header-languages', <<'__637a18cf607b727dec3feab552be05e2');
 \lstnewenvironment{htmlcode}      {\lstset{language=html}}{}
 __637a18cf607b727dec3feab552be05e2
 
-meta::resource('header-listings', <<'__747e2e3bc83de0d564ec96e91395fa84');
+meta::resource('header-listings', <<'__4caf6ff3ff152cce49ad5d1775ad0703');
 \definecolor{gray}{rgb}{0.6,0.6,0.6}
 
 \usepackage{caption}
 \DeclareCaptionFormat{listing}{\llap{\color{gray}#1\hspace{10pt}}\tt{}#3}
 \captionsetup[lstlisting]{format=listing, singlelinecheck=false, margin=0pt, font={bf}}
 
-\lstset{columns=fixed,basicstyle={\tt},numbers=left,basewidth=0.5em,showstringspaces=false,numberstyle={\color{gray}\scriptsize}}
-__747e2e3bc83de0d564ec96e91395fa84
+\lstset{columns=fixed,basicstyle={\tt},numbers=left,firstnumber=auto,basewidth=0.5em,showstringspaces=false,numberstyle={\color{gray}\scriptsize}}
+__4caf6ff3ff152cce49ad5d1775ad0703
 
 meta::resource('header-packages', <<'__f69baadb1d3ce11744003b174c91b34b');
 \usepackage[utf8]{inputenc}
@@ -1067,11 +1073,30 @@ __f69baadb1d3ce11744003b174c91b34b
 
 meta::resource('header-refs', '\newcommand{\Ref}[2]{\hyperref[#2]{#1 \ref*{#2}}}');
 meta::resource('header-resource', '\lstnewenvironment{resourcecode}{}{}');
-meta::section('introduction', <<'__ea2e91bda0cea5bd0f6cccf8973d51f8');
+meta::section('introduction', <<'__f45862f6fae6d1ef1174a36ac23ca61f');
 - s1 Introduction | sec:introduction
   Divergence is a JavaScript library designed to generate and manipulate functions. It provides some low-level code optimization by enabling compact notation for routine things such as
-  mapping, but it also provides a full JavaScript parser to decompile functions and implement systematic transformations. This can be useful when debugging, for example.
-__ea2e91bda0cea5bd0f6cccf8973d51f8
+  mapping, but it also provides a full JavaScript parser to decompile functions and implement systematic transformations. The idea is to take macros from Lisp, metaclasses from Ruby, and
+  concise but unreadable syntax from Perl, and extend JavaScript to support all of these features.
+
+  - s2 Basic concepts | sec:introduction-basic-concepts
+    The core construct in Divergence is the {\em functional}, which is essentially a function. The main difference is that a functional contains custom methods that can be used to apply it in
+    different ways. For example, the functional $x \mapsto x + 1$, constructed by \verb|var f = d('$ + 1')|, can be:
+
+    - itemize << end
+      - item
+        Applied to a single value: \verb|f(5)  // => 6|
+      - item
+        Mapped across an array: \verb|f.map([1, 2, 3])  // => [2, 3, 4]|
+      - item
+        Mapped across the keys of an object: \verb|f.keys({foo: 'bar'})  // => {foo1: 'bar'}|
+      - item
+        Mapped across the values of an object: \verb|f.values({foo: 'bar'})  // => {foo: 'bar1'}|
+    - end
+
+    The full list of such operators is given in \Ref{section}{sec:applicative-operators}, and you can define your own by extending \verb|d.fn|.\footnote{Though unfortunately they will not be
+    available on functionals that were created before your definition. You will have to invoke {\tt d()} on your functionals to update them.}
+__f45862f6fae6d1ef1174a36ac23ca61f
 
 meta::section('main', <<'__a61b22905685b4c5e0dcfe85cf37e7ef');
 - documentclass article
@@ -1088,6 +1113,7 @@ meta::section('main', <<'__a61b22905685b4c5e0dcfe85cf37e7ef');
 - end
 __a61b22905685b4c5e0dcfe85cf37e7ef
 
+meta::template('comment', "'';     # A mechanism for line or block comments.");
 meta::template('eval', <<'__7be1d470a07a06c58e971bc7fc24c048');
 my $result = eval $_[0];
 terminal::message('warning', "Error during template evaluation: $@") if $@;
@@ -1107,7 +1133,7 @@ return '' if template::failing_conditional($commands);
 join "\n", map retrieve($_), split /\s+/, $commands;
 __e0624844a65ae41e0217dd871fc0dbfb
 
-meta::vim_highlighter('cltex', <<'__10c051872325bda001b9653451009c65');
+meta::vim_highlighter('cltex', <<'__5bfc80e1a2ad3bb7cb4f57ff906d71b0');
 " Cleaner TeX
 " Maintainer: Spencer Tipping <spencer@spencertipping.com>
 " Language:   Cleaner TeX (a variant of LaTeX with support for a bunch of embedded languages)
@@ -1118,36 +1144,40 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn match   cltEofMarker  /<<\s*\w\+/ contained
-syn match   cltLine       /^\s*- .*$/ contains=cltEofMarker
+syn match   cltEofMarker   /<<\s*\w\+/ contained
+syn region  cltLineComment matchgroup=cltCode start=/^\s*- comment / end=/$/ contained
+syn match   cltLine        /^\s*- .*$/ contains=cltEofMarker,cltLineComment
 
-syn include @cpp          syntax/cpp.vim        | unlet b:current_syntax
-syn include @java         syntax/java.vim       | unlet b:current_syntax
-syn include @asm          syntax/asm.vim        | unlet b:current_syntax
-syn include @javascript   syntax/javascript.vim | unlet b:current_syntax
-syn include @html         syntax/html.vim       | unlet b:current_syntax
+syn include @cpp           syntax/cpp.vim        | unlet b:current_syntax
+syn include @java          syntax/java.vim       | unlet b:current_syntax
+syn include @asm           syntax/asm.vim        | unlet b:current_syntax
+syn include @javascript    syntax/javascript.vim | unlet b:current_syntax
+syn include @html          syntax/html.vim       | unlet b:current_syntax
 
-syn region  cltCpp        matchgroup=cltCode start=/^\s*- cpp .*<<\s*\z(\w\+\)$/        end=/^\s*- \z1$/ contains=@cpp
-syn region  cltJava       matchgroup=cltCode start=/^\s*- java .*<<\s*\z(\w\+\)$/       end=/^\s*- \z1$/ contains=@java
-syn region  cltAsm        matchgroup=cltCode start=/^\s*- asm .*<<\s*\z(\w\+\)$/        end=/^\s*- \z1$/ contains=@asm
-syn region  cltJavascript matchgroup=cltCode start=/^\s*- javascript .*<<\s*\z(\w\+\)$/ end=/^\s*- \z1$/ contains=@javascript
-syn region  cltHtml       matchgroup=cltCode start=/^\s*- html .*<<\s*\z(\w\+\)$/       end=/^\s*- \z1$/ contains=@html
+syn region  cltCpp         matchgroup=cltCode start=/^\z(\s*\)- cpp .*<<\s*\z(\w\+\)$/        end=/^\z1- \z2$/ contains=@cpp
+syn region  cltJava        matchgroup=cltCode start=/^\z(\s*\)- java .*<<\s*\z(\w\+\)$/       end=/^\z1- \z2$/ contains=@java
+syn region  cltAsm         matchgroup=cltCode start=/^\z(\s*\)- asm .*<<\s*\z(\w\+\)$/        end=/^\z1- \z2$/ contains=@asm
+syn region  cltJavascript  matchgroup=cltCode start=/^\z(\s*\)- javascript .*<<\s*\z(\w\+\)$/ end=/^\z1- \z2$/ contains=@javascript
+syn region  cltHtml        matchgroup=cltCode start=/^\z(\s*\)- html .*<<\s*\z(\w\+\)$/       end=/^\z1- \z2$/ contains=@html
+syn region  cltResource    matchgroup=cltCode start=/^\z(\s*\)- resource .*<<\s*\z(\w\+\)$/   end=/^\z1- \z2$/
+syn region  cltComment     matchgroup=cltCode start=/^\z(\s*\)- comment .*<<\s*\z(\w\+\)$/    end=/^\z1- \z2$/
 
-syn region  cltResource   matchgroup=cltCode start=/^\s*- resource .*<<\s*\z(\w\+\)$/   end=/^\s*- \z1$/
+syn cluster cltStuff       add=cltCpp,cltJava,cltAsm,cltJavascript,cltHtml,cltResource,cltComment,cltLine
 
-syn cluster cltStuff      add=cltCpp,cltJava,cltAsm,cltJavascript,cltHtml,cltResource,cltVerbatim,cltLine
+syn region  cltDocument    start=/\%^/ end=/\%$/ contains=@cltStuff
 
-syn region  cltDocument   start=/\%^/ end=/\%$/ contains=@cltStuff
+hi link cltLine            Special
+hi link cltKeyword         String
+hi link cltResource        String
+hi link cltEofMarker       String
 
-hi link cltLine           Special
-hi link cltKeyword        String
-hi link cltResource       String
-
-hi link cltCode           Special
-hi link cltDocument       Comment
+hi link cltCode            Special
+hi link cltDocument        Comment
+hi link cltComment         Type
+hi link cltLineComment     Type
 
 let b:current_syntax = "cltex"
-__10c051872325bda001b9653451009c65
+__5bfc80e1a2ad3bb7cb4f57ff906d71b0
 
 meta::internal('runtime', <<'__487b99b3af6056d1d1c0e00dd4aef707');
 my $initial_state        = state();
