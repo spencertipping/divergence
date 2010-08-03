@@ -338,7 +338,7 @@ __3c6177256de0fddb721f534c3ad8c0ee
 
 meta::data('name', 'divergence');
 meta::data('output-dir', '/tmp');
-meta::data('pdf-output-file', '/tmp/divergence.d83ee803211feaa833550e3ca86710d0/document.pdf');
+meta::data('pdf-output-file', '/tmp/divergence.9c80263edf938c6a3b9b284157ddd3e4/document.pdf');
 meta::data('pdf-reader', '/usr/bin/evince');
 meta::data('pdftex-command', 'pdflatex -output-directory=__TEMPORARY_DIRECTORY__ __INPUT_FILE__');
 meta::data('quiet', '1');
@@ -1073,7 +1073,44 @@ __f69baadb1d3ce11744003b174c91b34b
 
 meta::resource('header-refs', '\newcommand{\Ref}[2]{\hyperref[#2]{#1 \ref*{#2}}}');
 meta::resource('header-resource', '\lstnewenvironment{resourcecode}{}{}');
-meta::section('introduction', <<'__f45862f6fae6d1ef1174a36ac23ca61f');
+meta::section('constructing-functionals', <<'__2a3c4cbc08ae98b2a44f7787b4cabb22');
+- s1 Constructing Functionals | sec:constructing-functionals
+  Functionals are generally constructed with the \verb|d()| function. \verb|d()| contains logic to convert primitive values to functionals, and it provides an interface to allow for custom
+  conversions as well.
+
+  - javascript divergence.js << end
+    var d = (function (global_eval) {
+      var d = function () {return global_eval (d.local.apply (this, arguments))};
+  - end
+
+  - s2 Using {\tt eval} | sec:constructing-using-eval
+    Divergence ends up using \verb|eval()| to promote things into functions. This happens with rebased functions, strings, and potentially custom data types. \verb|eval()| has a couple of
+    difficulties. First, it is slow, so it should be cached whenever possible. Second, and more importantly, it is dynamically scoped; that is, the scope where the \verb|eval()| appears
+    becomes the lexical parent of whatever code is evaluated. Divergence works around this by providing two interfaces to things. The default interface performs any \verb|eval()| steps for
+    you, and the alternative ``local'' interface produces code to be \verb|eval|ed on the spot. The difference is this:
+
+    - verbatim << end
+      var g  = 5;
+      var f1 = d('$ + g');              // refers to global g
+      var f2 = eval(d.local('$ + g'));  // refers to local g
+    - end
+
+    Supporting this duplication requires Divergence to deparse every function that it gets, just to be on the safe side. There are some advantages to this approach, though. One is that you get
+    preprocessing for free; by setting \verb|d.preprocess| to a string-to-string function, Divergence can transparently rewrite functions as you run them through \verb|d()|. Another, related
+    to that, is that all of the functionals that Divergence processes get converted into the same form, which means that extension APIs have an easier time working with them.
+
+  - s2 String conversion | sec:constructing-string-conversion
+    Strings are treated as function bodies after being run through a JavaScript preprocessor. Initially the preprocessor does some regular expression-based substitutions, and later on this
+    logic is replaced by a full JavaScript parser and transformation library.
+
+    - javascript >> divergence.js << end
+      d.from_string = function (s) {
+        return global_eval ('(function () {return ' + d.preprocess (s) + '})');
+      };
+    - end
+__2a3c4cbc08ae98b2a44f7787b4cabb22
+
+meta::section('introduction', <<'__9367419a7c5594d2a52eb3b1916ee957');
 - s1 Introduction | sec:introduction
   Divergence is a JavaScript library designed to generate and manipulate functions. It provides some low-level code optimization by enabling compact notation for routine things such as
   mapping, but it also provides a full JavaScript parser to decompile functions and implement systematic transformations. The idea is to take macros from Lisp, metaclasses from Ruby, and
@@ -1095,10 +1132,10 @@ meta::section('introduction', <<'__f45862f6fae6d1ef1174a36ac23ca61f');
     - end
 
     The full list of such operators is given in \Ref{section}{sec:applicative-operators}, and you can define your own by extending \verb|d.fn|.\footnote{Though unfortunately they will not be
-    available on functionals that were created before your definition. You will have to invoke {\tt d()} on your functionals to update them.}
-__f45862f6fae6d1ef1174a36ac23ca61f
+    available on functionals that were created before your definition. See \Ref{section}{sec:extending-functionals} for more details about this.}
+__9367419a7c5594d2a52eb3b1916ee957
 
-meta::section('main', <<'__a61b22905685b4c5e0dcfe85cf37e7ef');
+meta::section('main', <<'__f83d0084a9e31934cd923973c9691068');
 - documentclass article
 - include resource::header
 
@@ -1110,8 +1147,9 @@ meta::section('main', <<'__a61b22905685b4c5e0dcfe85cf37e7ef');
   - tableofcontents
   
   - include section::introduction
+  - include section::constructing-functionals
 - end
-__a61b22905685b4c5e0dcfe85cf37e7ef
+__f83d0084a9e31934cd923973c9691068
 
 meta::template('comment', "'';     # A mechanism for line or block comments.");
 meta::template('eval', <<'__7be1d470a07a06c58e971bc7fc24c048');
