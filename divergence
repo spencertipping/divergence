@@ -229,7 +229,7 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__WPNAv5G0sKzGcxzLakfm+5Gnf2gSLt2YPa7KzzcXrT0');
+meta::code('main', <<'__yBSp0HRvqfx/UURW8Uppx4fRdnaJ9ZZ754Em8PIrLIA');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
@@ -251,7 +251,7 @@ var d = (function (eval_in_global_scope) {
                                           trace: function    (x) {d.tracer && d.tracer (arguments.length === 1 ? x : d.arr (arguments).join (', ')); return x}});
 
   d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
-                         lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
+                         lookup: function  () {return '$0.split(".").fold("$0 === null || $0 === undefined ? $0 : $0[$1]", $1)'.fn(this)},
                            fail: function  () {throw new Error (this.toString())},
                              fn: function  () {var s = this.toString(), f = c[s] || (c[s] = eval_in_global_scope ('(function(){return ' + d.macro_expand(s) + '})'));
                                                return f.fn.apply (f, arguments)}});
@@ -296,7 +296,7 @@ var d = (function (eval_in_global_scope) {
           fix:  function  () {var f = this.fn(); return f (function () {return f.fix().apply (this, arguments)})}});
 
   return d}) (function () {return eval (arguments[0])});
-__WPNAv5G0sKzGcxzLakfm+5Gnf2gSLt2YPa7KzzcXrT0
+__yBSp0HRvqfx/UURW8Uppx4fRdnaJ9ZZ754Em8PIrLIA
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.

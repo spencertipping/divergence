@@ -22,7 +22,7 @@ var d = (function (eval_in_global_scope) {
                                           trace: function    (x) {d.tracer && d.tracer (arguments.length === 1 ? x : d.arr (arguments).join (', ')); return x}});
 
   d (String.prototype, {maps_to: function (v) {var result = {}; result[this] = v; return result},
-                         lookup: function  () {return '$0.split(".").fold("$0[$1]", $1)'.fn(this)},
+                         lookup: function  () {return '$0.split(".").fold("$0 === null || $0 === undefined ? $0 : $0[$1]", $1)'.fn(this)},
                            fail: function  () {throw new Error (this.toString())},
                              fn: function  () {var s = this.toString(), f = c[s] || (c[s] = eval_in_global_scope ('(function(){return ' + d.macro_expand(s) + '})'));
                                                return f.fn.apply (f, arguments)}});
