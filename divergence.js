@@ -3,7 +3,7 @@
 
 // See the Divergence guide (http://github.com/spencertipping/divergence-guide) for documentation about the functions here.
 
-var d = (function (eval_in_global_scope) {
+d = (function (eval_in_global_scope) {
   var c = {}, d = function () {return d[d.default_action].apply (this, arguments)}, gensym_count = 0;
   d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i)
                            if ($_.fn && $_.constructor !== Object) $_.fn().call (o);

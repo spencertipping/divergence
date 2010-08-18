@@ -229,13 +229,13 @@ something most people will normally do. In the future there may be a locking mec
 
 __3uM+GRhsAnxE6BFehM2nkGju4J93JQjqONxKbpE0Cdg
 
-meta::code('main', <<'__Iq5+R59cwfG0nr7ZV5HUR1mCded7EzYZTKVegXe29IM');
+meta::code('main', <<'__Bs7XIRcJUQkAK+OfaHln7q/leWnZ2ADJAW8Lv4haBdo');
 Divergence core library | Spencer Tipping <spencer@spencertipping.com>
 Licensed under the terms of the MIT source code license
 
 See the Divergence guide (http://github.com/spencertipping/divergence-guide) for documentation about the functions here.
 
-var d = (function (eval_in_global_scope) {
+d = (function (eval_in_global_scope) {
   var c = {}, d = function () {return d[d.default_action].apply (this, arguments)}, gensym_count = 0;
   d.init = function (o) {for (var i = 1, l = arguments.length, $_ = null; $_ = arguments[i], i < l; ++i)
                            if ($_.fn && $_.constructor !== Object) $_.fn().call (o);
@@ -298,7 +298,7 @@ var d = (function (eval_in_global_scope) {
           fix:  function  () {var f = this.fn(); return f (function () {return f.fix().apply (this, arguments)})}});
 
   return d}) (function () {return eval (arguments[0])});
-__Iq5+R59cwfG0nr7ZV5HUR1mCded7EzYZTKVegXe29IM
+__Bs7XIRcJUQkAK+OfaHln7q/leWnZ2ADJAW8Lv4haBdo
 
 meta::code('scratch', <<'__UFvA92B98GVzh3boXGxl19QiD9162rJI14MuI2vyVq0');
 This is for scratchwork that isn't part of your system. It could be used for testing or other experimentation.
