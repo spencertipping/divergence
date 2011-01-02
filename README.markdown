@@ -1,3 +1,5 @@
+Note: This project has been superseded by Caterwaul at <http://github.com/spencertipping/caterwaul> and isn't actively maintained anymore. Divergence isn't IE-compatible due to bugs in IE's eval() function.
+
 Divergence is a JavaScript library designed to manipulate functions. It provides a few things:
 
 1. Explicit and implicit function promotion
